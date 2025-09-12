@@ -1,6 +1,7 @@
 import os
 import json
 
+
 class ConfigUtils:
 
     def get_server_list(self):
@@ -10,7 +11,7 @@ class ConfigUtils:
         path = os.path.join(self.get_plugin_path(), 'config', 'config.json')
         with open(path, 'r', encoding='utf-8') as f:
             return json.load(f)['servers']
-        
+
     def get_bot_prefix(self):
         """
         获取机器人前缀
@@ -18,6 +19,17 @@ class ConfigUtils:
         path = os.path.join(self.get_plugin_path(), 'config', 'config.json')
         with open(path, 'r', encoding='utf-8') as f:
             return json.load(f)['bot_prefix']
+
+    def get_loc_list(self):
+        path = os.path.join(self.get_plugin_path(), 'data', 'loc.json')
+        with open(path, 'r', encoding='utf-8') as f:
+            return json.load(f)['server_loc']
+
+    def set_loc_list(self, list: list):
+        path = os.path.join(self.get_plugin_path(), 'data', 'loc.json')
+        json_str = {'server_loc': list}
+        with open(path, 'w', encoding='utf-8') as f:
+            json.dump(json_str, f, ensure_ascii=False, indent=4)
 
     def get_plugin_path(self):
         """获取当前插件的路径

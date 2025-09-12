@@ -43,6 +43,12 @@ class McAdminPlugin(Star):
         command_utils = CommandUtils()
         yield event.plain_result(command_utils.mc(msg, event))
 
+    @filter.command("loc")
+    async def mc(self, event: AstrMessageEvent):
+        msg = event.message_str
+        command_utils = CommandUtils()
+        yield event.plain_result(command_utils.loc(msg, event))
+
     @filter.command("list")
     async def list(self, event: AstrMessageEvent):
         command_utils = CommandUtils()

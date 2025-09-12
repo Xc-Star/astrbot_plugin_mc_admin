@@ -7,10 +7,21 @@ HELP_MESSAGE = """
 /task list 服务器工程列表 (开发中)
 /task <工程名字> 查询工程的材料列表 (开发中)
 /task commit <工程名字> <提交材料的编号> <完成进度> <材料所在位置/假人> (开发中)
-/loc add <项目名字> <坐标> 添加服务器项目 (开发中)
+/loc add <项目名字> <0-主世界 1-地狱 2-末地> <坐标> 添加服务器项目 (开发中)
+/loc remove <项目名字> 删除服务器项目 (开发中)
 /loc list 服务器项目坐标列表 (开发中)
+/loc <项目名字> 查看项目地址 (开发中)
+/loc set <项目名字> <0-主世界 1-地狱 2-末地> <坐标> 修改项目坐标 (开发中)
 /mc wl add/remove <ID> 给玩家添加/移除白名单(管理员)
 /mc command <服务器名字> <command> 向指定服务器发送命令(管理员)
+"""
+
+LOC_HELP_MESSAGE = """
+/loc add <项目名字> <0-主世界 1-地狱 2-末地> <坐标> 添加服务器项目 (开发中)
+/loc remove <项目名字> 删除服务器项目 (开发中)
+/loc list 服务器项目坐标列表 (开发中)
+/loc <项目名字> 查看项目地址 (开发中)
+/loc set <项目名字> <0-主世界 1-地狱 2-末地> <坐标> 修改项目坐标 (开发中)
 """
 
 class MessageUtils:
@@ -19,3 +30,6 @@ class MessageUtils:
 
     def get_help_message(self):
         return HELP_MESSAGE
+
+    def get_loc_help_message(self):
+        return LOC_HELP_MESSAGE

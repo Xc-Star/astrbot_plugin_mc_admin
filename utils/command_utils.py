@@ -5,7 +5,10 @@ from .config_utils import ConfigUtils
 from .image_utils import ImageUtils
 from .message_utils import MessageUtils
 from astrbot.api import logger
+from .pojo.loc_result import LocResult
+from .loc_utils import LocUtils
 import re
+
 
 class CommandUtils:
     def __init__(self):
@@ -54,6 +57,7 @@ class CommandUtils:
         return message.get_help_message()
 
     def list(self):
+        """处理list命令的函数"""
 
         # 获取服务器列表
         config_utils = ConfigUtils()
@@ -68,7 +72,7 @@ class CommandUtils:
                 rcon = Rcon(host=server["host"], password=server["password"], port=server["port"])
             except:
                 continue
-            
+
             res = rcon.send_command("list")
 
             # 分割玩家列表，防止玩家ID过短导致报错
@@ -86,8 +90,6 @@ class CommandUtils:
             except (IndexError, AttributeError):
                 continue
 
-
-
             bot_players = [p for p in players if self.is_bot_player(p, bot_prefix)]
             real_players = [p for p in players if not self.is_bot_player(p, bot_prefix)]
             """
@@ -101,7 +103,7 @@ class CommandUtils:
                     "real_players": ["SCT1", "SCT2"]
                 }
             }
-            
+
             """
             servers_players[server["name"]] = {
                 "bot_players": bot_players,
@@ -115,7 +117,9 @@ class CommandUtils:
         return image_path
 
         # 处理假人前缀的大小写混用和中英文混用
+
     def is_bot_player(self, player_name, bot_prefix):
+        """判断是否是bot"""
         if not player_name or len(player_name) < 3:  # 防止玩家ID过短
             return False
 
@@ -127,6 +131,7 @@ class CommandUtils:
         return player_lower.startswith(prefix_lower)
 
     def wl(self, msg: str, event: AstrMessageEvent) -> str:
+        """处理白名单命令的函数"""
 
         # 管理员权限
         if not event.is_admin():
@@ -170,3 +175,38 @@ class CommandUtils:
                 rcon.send_command(f'whitelist {arr[1]} {arr[2]}')
             method = '添加到' if arr[1] == 'add' else '移除'
             return f'已将{arr[2] + method}白名单'
+
+    def loc(self, msg: str, event: AstrMessageEvent) -> LocResult:
+        """处理loc命令的函数"""
+        """
+        /loc add <项目名字> <0-主世界 1-地狱 2-末地> <坐标> 添加服务器项目 (开发中)
+        /loc remove <项目名字> 删除服务器项目 (开发中)
+        /loc list 服务器项目坐标列表 (开发中)
+        /loc <项目名字> 查看项目地址 (开发中)
+        /loc set <项目名字> <0-主世界 1-地狱 2-末地> <坐标> 修改项目坐标 (开发中)
+        """
+        # 校验命令是否为 loc add/remove/list/set开头
+        if msg.startswith('loc list'):
+            # 列表
+            loc_utils = LocUtils()
+            return LocResult(LocResult().type_image, loc_utils.list_loc())
+        elif msg.startswith('loc add'):
+            # 添加
+            loc_utils = LocUtils()
+            return loc_utils.add_loc(msg)
+        elif msg.startswith('loc remove'):
+            # 删除
+            loc_utils = LocUtils()
+            return loc_utils.remove_loc(msg)
+        elif msg.startswith('loc set'):
+            # 修改
+            loc_utils = LocUtils()
+            return loc_utils.set_loc(msg)
+        elif msg.startswith('loc '):
+            # 查询
+            name = msg[4:]
+            loc_utils = LocUtils()
+            return loc_utils.get_loc(name)
+
+        message_utils = MessageUtils()
+        return message_utils.get_loc_help_message()
