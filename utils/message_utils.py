@@ -1,0 +1,21 @@
+HELP_MESSAGE = """
+欢迎使用Xc_Star的Minecraft服务器管理插件
+/list 获取在线玩家列表
+/zz <X坐标> <Z坐标> 珍珠炮计算 (开发中)
+/task add 添加工程 (开发中)
+    (发送命令后发材料列表的Excel文件，Excel文件可以通过v4.sctserver.top:81生成)
+/task list 服务器工程列表 (开发中)
+/task <工程名字> 查询工程的材料列表 (开发中)
+/task commit <工程名字> <提交材料的编号> <完成进度> <材料所在位置/假人> (开发中)
+/loc add <项目名字> <坐标> 添加服务器项目 (开发中)
+/loc list 服务器项目坐标列表 (开发中)
+/mc wl add/remove <ID> 给玩家添加/移除白名单(管理员)
+/mc command <服务器名字> <command> 向指定服务器发送命令(管理员)
+"""
+
+class MessageUtils:
+    def __init__(self):
+        pass
+
+    def get_help_message(self):
+        return HELP_MESSAGE

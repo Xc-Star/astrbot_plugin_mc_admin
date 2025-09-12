@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minecraft 在线玩家列表</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', 'PingFang SC', 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            color: #333;
+            margin: 0;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .title {
+            text-align: center;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .server-card {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .server-name {
+            font-size: 18px;
+            font-weight: bold;
+            color: white;
+            margin-bottom: 12px;
+            text-align: center;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        }
+
+        .player-section {
+            margin-bottom: 16px;
+        }
+
+        .section-title {
+            font-size: 14px;
+            font-weight: bold;
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 8px;
+            padding-left: 8px;
+        }
+
+        .player-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .player-card {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(8px);
+            border-radius: 6px;
+            padding: 4px 8px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            transition: all 0.3s ease;
+            flex: 0 0 auto;
+            white-space: nowrap;
+        }
+
+        .player-card:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: translateY(-1px);
+        }
+
+        .player-avatar {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            object-fit: cover;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+            flex-shrink: 0;
+        }
+
+        .player-name {
+            font-size: 12px;
+            font-weight: 500;
+            color: white;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+            white-space: nowrap;
+        }
+
+        .no-players {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 14px;
+            font-style: italic;
+        }
+
+        .real-players .section-title {
+            color: #4ade80;
+        }
+
+        .bot-players .section-title {
+            color: #fbbf24;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="title">Minecraft 在线玩家列表</div>
+        <div id="servers-container">
+            <!-- 服务器卡片将通过 JavaScript 动态生成 -->
+        </div>
+    </div>
+
+    <script>
+        // 玩家数据将通过 Python 传递到这里
+        const serversData = JSON.parse('{{ servers_data | safe }}');
+        
+        function renderServers() {
+            const container = document.getElementById('servers-container');
+            
+            if (!serversData || Object.keys(serversData).length === 0) {
+                container.innerHTML = '<div class="no-players">暂无服务器数据</div>';
+                return;
+            }
+            
+            let html = '';
+            
+            for (const [serverName, data] of Object.entries(serversData)) {
+                html += `
+                    <div class="server-card">
+                        <div class="server-name">${serverName}</div>
+                        
+                        <div class="player-section real-players">
+                            <div class="section-title">玩家 (${data.real_players.length})</div>
+                            <div class="player-list">
+                                ${data.real_players.length > 0 ? 
+                                    data.real_players.map(player => `
+                                        <div class="player-card">
+                                            <img src="https://crafthead.net/avatar/${player}" alt="${player}" class="player-avatar" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjNjY2Ii8+Cjx0ZXh0IHg9IjIwIiB5PSIyNCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0IiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+8J+OiTwvdGV4dD4KPC9zdmc+'">
+                                            <div class="player-name">${player}</div>
+                                        </div>
+                                    `).join('') : 
+                                    '<div class="no-players" style="width: 100%; text-align: center;">没有玩家在线</div>'
+                                }
+                            </div>
+                        </div>
+                        
+                        <div class="player-section bot-players">
+                            <div class="section-title">假人 (${data.bot_players.length})</div>
+                            <div class="player-list">
+                                ${data.bot_players.length > 0 ? 
+                                    data.bot_players.map(player => `
+                                        <div class="player-card">
+                                            <img src="https://crafthead.net/avatar/${player}" alt="${player}" class="player-avatar" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjNjY2Ii8+Cjx0ZXh0IHg9IjIwIiB5PSIyNCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0IiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+8J+OiTwvdGV4dD4KPC9zdmc+'">
+                                            <div class="player-name">${player}</div>
+                                        </div>
+                                    `).join('') : 
+                                    '<div class="no-players" style="width: 100%; text-align: center;">没有假人在线</div>'
+                                }
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            container.innerHTML = html;
+        }
+        
+        // 页面加载完成后渲染
+        document.addEventListener('DOMContentLoaded', renderServers);
+    </script>
+</body>
+</html>
