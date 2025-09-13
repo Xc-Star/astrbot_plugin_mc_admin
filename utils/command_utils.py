@@ -7,6 +7,7 @@ from .message_utils import MessageUtils
 from astrbot.api import logger
 from .pojo.loc_result import LocResult
 from .loc_utils import LocUtils
+from .pojo.loc import Loc
 import re
 
 
@@ -189,24 +190,173 @@ class CommandUtils:
         if msg.startswith('loc list'):
             # 列表
             loc_utils = LocUtils()
-            return LocResult(LocResult().type_image, loc_utils.list_loc())
+            result = LocResult()
+            result.msg_result(loc_utils.list_loc())
+            return result
         elif msg.startswith('loc add'):
             # 添加
-            loc_utils = LocUtils()
-            return loc_utils.add_loc(msg)
+            try:
+                parts = msg.split()
+                if len(parts) < 5:
+                    message_utils = MessageUtils()
+                    result = LocResult()
+                    result.msg_result("参数不足，请使用格式: /loc add <项目名字> <0-主世界 1-地狱 2-末地> <坐标>")
+                    return result
+                
+                name = parts[2]
+                dimension = int(parts[3])
+                coordinates = ' '.join(parts[4:])
+                
+                # 验证坐标格式
+                coord_parts = coordinates.split()
+                if len(coord_parts) != 3:
+                    result = LocResult()
+                    result.msg_result("坐标格式错误，请使用格式: x y z")
+                    return result
+                
+                # 验证坐标是否为数字
+                try:
+                    x, y, z = int(coord_parts[0]), int(coord_parts[1]), int(coord_parts[2])
+                except ValueError:
+                    result = LocResult()
+                    result.msg_result("坐标必须为数字")
+                    return result
+                
+                # 验证坐标范围（Minecraft世界坐标范围）
+                if not (-30000000 <= x <= 30000000 and -30000000 <= z <= 30000000 and -64 <= y <= 368):
+                    result = LocResult()
+                    result.msg_result("坐标超出有限范围")
+                    return result
+                
+                # 创建Loc对象
+                loc = Loc(name=name)
+                if dimension == 0:
+                    loc.overworld = (x, y, z)
+                elif dimension == 1:
+                    loc.nether = (x, y, z)
+                elif dimension == 2:
+                    loc.end = (x, y, z)
+                else:
+                    result = LocResult()
+                    result.msg_result("维度参数错误，0-主世界 1-地狱 2-末地")
+                    return result
+                
+                loc_utils = LocUtils()
+                res = loc_utils.add_loc(loc)
+                result = LocResult()
+                result.msg_result(res)
+                return result
+            except Exception as e:
+                result = LocResult()
+                result.msg_result(f"添加位置失败: {str(e)}")
+                return result
         elif msg.startswith('loc remove'):
             # 删除
-            loc_utils = LocUtils()
-            return loc_utils.remove_loc(msg)
+            try:
+                parts = msg.split()
+                if len(parts) < 3:
+                    result = LocResult()
+                    result.msg_result("参数不足，请使用格式: /loc remove <项目名字>")
+                    return result
+                
+                name = parts[2]
+                loc_utils = LocUtils()
+                res = loc_utils.remove_loc(name)
+                result = LocResult()
+                result.msg_result(res)
+                return result
+            except Exception as e:
+                result = LocResult()
+                result.msg_result(f"删除位置失败: {str(e)}")
+                return result
         elif msg.startswith('loc set'):
             # 修改
-            loc_utils = LocUtils()
-            return loc_utils.set_loc(msg)
+            try:
+                parts = msg.split()
+                if len(parts) < 5:
+                    result = LocResult()
+                    result.msg_result("参数不足，请使用格式: /loc set <项目名字> <0-主世界 1-地狱 2-末地> <坐标>")
+                    return result
+                
+                name = parts[2]
+                dimension = int(parts[3])
+                coordinates = ' '.join(parts[4:])
+                
+                # 验证坐标格式
+                coord_parts = coordinates.split()
+                if len(coord_parts) != 3:
+                    result = LocResult()
+                    result.msg_result("坐标格式错误，请使用格式: x y z")
+                    return result
+                
+                # 验证坐标是否为数字
+                try:
+                    x, y, z = int(coord_parts[0]), int(coord_parts[1]), int(coord_parts[2])
+                except ValueError:
+                    result = LocResult()
+                    result.msg_result("坐标必须为数字")
+                    return result
+                
+                # 验证坐标范围（Minecraft世界坐标范围）
+                if not (-30000000 <= x <= 30000000 and -30000000 <= z <= 30000000 and -64 <= y <= 368):
+                    result = LocResult()
+                    result.msg_result("坐标超出有限范围")
+                    return result
+                
+                # 创建Loc对象
+                loc = Loc(name=name)
+                if dimension == 0:
+                    loc.overworld = (x, y, z)
+                elif dimension == 1:
+                    loc.nether = (x, y, z)
+                elif dimension == 2:
+                    loc.end = (x, y, z)
+                else:
+                    result = LocResult()
+                    result.msg_result("维度参数错误，0-主世界 1-地狱 2-末地")
+                    return result
+                
+                loc_utils = LocUtils()
+                res = loc_utils.set_loc(loc)
+                result = LocResult()
+                result.msg_result(res)
+                return result
+            except Exception as e:
+                result = LocResult()
+                result.msg_result(f"修改位置失败: {str(e)}")
+                return result
         elif msg.startswith('loc '):
             # 查询
-            name = msg[4:]
-            loc_utils = LocUtils()
-            return loc_utils.get_loc(name)
+            try:
+                name = msg[4:].strip()
+                if not name:
+                    result = LocResult()
+                    result.msg_result("请输入位置名称")
+                    return result
+                
+                loc_utils = LocUtils()
+                loc = loc_utils.get_loc_by_name(name)
+                if loc:
+                    result_str = f"位置: {loc.name}\n"
+                    if loc.overworld:
+                        result_str += f"主世界: {loc.overworld[0]} {loc.overworld[1]} {loc.overworld[2]}\n"
+                    if loc.nether:
+                        result_str += f"下界: {loc.nether[0]} {loc.nether[1]} {loc.nether[2]}\n"
+                    if loc.end:
+                        result_str += f"末地: {loc.end[0]} {loc.end[1]} {loc.end[2]}"
+                    result = LocResult()
+                    result.msg_result(result_str.strip())
+                    return result
+                else:
+                    result = LocResult()
+                    result.msg_result(f"未找到位置: {name}")
+                    return result
+            except Exception as e:
+                result = LocResult()
+                result.msg_result(f"查询位置失败: {str(e)}")
+                return result
 
         message_utils = MessageUtils()
-        return message_utils.get_loc_help_message()
+        result = LocResult()
+        result.msg_result(message_utils.get_loc_help_message())
+        return result
