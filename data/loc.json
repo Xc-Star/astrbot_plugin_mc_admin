@@ -1,19 +1,28 @@
 {
-  "server_loc": {
-    "鱼塔": {
-      "overworld": "100 63 200",
-      "nether": "13 63 26",
-      "end": "0 0 0"
-    },
-    "猪灵交易": {
-      "overworld": "0 0 0",
-      "nether": "169 63 294",
-      "end": "0 0 0"
-    },
-    "小黑塔": {
-      "overworld": "0 0 0",
-      "nether": "0 0 0",
-      "end": "100 0 300"
-    }
-  }
+    "server_loc": [
+        {
+            "name": "鱼塔",
+            "overworld": "100 63 200",
+            "nether": "13 63 26",
+            "end": null
+        },
+        {
+            "name": "猪灵交易",
+            "overworld": null,
+            "nether": "169 63 294",
+            "end": null
+        },
+        {
+            "name": "小黑塔",
+            "overworld": null,
+            "nether": null,
+            "end": "100 0 300"
+        },
+        {
+            "name": "工业区",
+            "overworld": "8 2 16",
+            "nether": "1 2 2",
+            "end": null
+        }
+    ]
 }

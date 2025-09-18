@@ -32,7 +32,7 @@ class McAdminPlugin(Star):
         yield event.plain_result(f"Hello, {user_name}, 你发了 {message_str}!") # 发送一条纯文本消息
 
     @filter.command("test")
-    async def test(self, event: AstrMessageEvent):
+    async def test(self, event: AstrMessageEvent, e1: MessageEventResult):
         image_utils = ImageUtils()
         path = image_utils.generate_list_image()
         yield event.image_result(path)
@@ -44,7 +44,7 @@ class McAdminPlugin(Star):
         yield event.plain_result(command_utils.mc(msg, event))
 
     @filter.command("loc")
-    async def mc(self, event: AstrMessageEvent):
+    async def loc(self, event: AstrMessageEvent):
         msg = event.message_str
         command_utils = CommandUtils()
         yield event.plain_result(command_utils.loc(msg, event))
