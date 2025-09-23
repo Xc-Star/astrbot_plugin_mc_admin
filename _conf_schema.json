@@ -1,0 +1,38 @@
+{
+    "enabled_groups": {
+        "description": "启用回复功能的群聊列表",
+        "type": "list",
+        "hint": "只有在这个列表中的群聊才会启用回复功能，如果为空则不启用回复功能",
+        "default": []
+    },
+    "bot_prefix":{
+        "description":"假人前缀",
+        "type":"string",
+        "hint":"假人的前缀(如果是“假的”可以直接使用中文)",
+        "default":"bot_"
+    },
+    "servers": {
+        "description": "服务器列表",
+        "type": "list",
+        "hint": "配置需要监听的服务器列表，以“名字:地址:端口:RCON密码”来进行配置。注意使用英文的分号",
+        "default": []
+    },
+    "enable_whitelist_compare": {
+        "description": "list命令是否开启白名单对比",
+        "type": "bool",
+        "hint": "开启之后不会使用前缀区别假人",
+        "default": false
+    },
+    "enable_background_image": {
+        "description": "list生成的图片是否开启背景图",
+        "type": "bool",
+        "hint": "",
+        "default": true
+    },
+    "background_image_path": {
+        "description": "背景图文件夹路径",
+        "type": "string",
+        "hint": "会从这个文件夹里面随机选择一张图片作为背景图，默认路径为'~/astrbot_plugin_mc_admin/data/background_image'",
+        "default": ""
+    }
+}

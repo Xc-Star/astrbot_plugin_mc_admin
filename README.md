@@ -1,9 +1,77 @@
-# helloworld
+# Minecraft 服务器管理插件
 
-AstrBot 插件模板
+一款基于 AstrBot 的 Minecraft 服务器管理插件，支持玩家列表查看、珍珠坐标计算、服务器工程管理、坐标管理、白名单管理等功能。
 
-A template plugin for AstrBot plugin feature
+## 插件信息
+- 插件名称：astrbot_plugin_mc_admin
+- 作者：Xc_Star
+- 版本：0.1
+- 仓库地址：[https://github.com/Xc-Star/astrbot_plugin_mc_admin](https://github.com/Xc-Star/astrbot_plugin_mc_admin)
 
-# 支持
+## 功能说明
 
-[帮助文档](https://astrbot.app)
+### 已实现功能
+- **在线玩家列表**：获取所有配置服务器的在线玩家列表
+- **坐标管理**：添加、修改、删除和查看服务器内的项目坐标
+- **白名单管理**：管理员可以添加/移除白名单玩家
+- **服务器命令发送**：管理员可以向指定服务器发送命令
+- **白名单对比**：在list命令中对比白名单
+- **背景图**：为生成的玩家列表图片添加背景图
+- **群聊回复限制**：限制只有指定群聊才能使用回复功能
+
+### 开发中功能
+- **珍珠炮计算**：通过坐标计算珍珠炮落点
+- **任务管理**：查看和管理服务器工程
+
+## 配置说明
+
+插件配置文件为 `_conf_schema.json`，包含以下配置项：
+
+| 配置项 | 类型 | 默认值 | 说明 |
+|-------|------|-------|------|
+| `enabled_groups` | list | [] | 启用回复功能的群聊列表 |
+| `bot_prefix` | string | "bot_" | 假人的前缀，用于区分假人和真实玩家 |
+| `servers` | list | [] | 配置需要监听的服务器列表，格式为"名字:地址:端口:RCON密码" |
+| `enable_whitelist_compare` | bool | false | list命令是否开启白名单对比 |
+| `enable_background_image` | bool | false | list生成的图片是否开启背景图 |
+| `background_image_path` | string | "" | 背景图文件夹路径 |
+
+## 使用方法
+
+### 基础命令
+
+#### 查看帮助信息
+发送 /mc 即可显示帮助信息
+```
+/mc
+```
+
+### 管理员命令
+
+#### 白名单管理
+添加白名单：
+```
+/mc wl add <玩家ID>
+```
+
+移除白名单：
+```
+/mc wl remove <玩家ID>
+```
+
+查看白名单：
+```
+/mc wl list
+```
+
+#### 向服务器发送命令
+服务器名字可以在 /list 命令返回的图片中查看
+```
+/mc command <服务器名字> <命令>
+```
+
+## 注意事项
+1. 使用管理员命令需要拥有管理员权限
+2. 服务器列表配置需要正确的RCON连接信息
+3. 添加坐标时，请确保坐标在有效范围内（X/Z: -30000000~30000000, Y: -64~368）
+4. 珍珠炮计算和任务管理功能正在开发中
