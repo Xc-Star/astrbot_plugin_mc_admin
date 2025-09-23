@@ -19,7 +19,7 @@ class CommandUtils:
         self.config_utils = ConfigUtils(config)
         self.message = MessageUtils()
         self.image_utils = ImageUtils(self.config_utils)
-        self.loc_utils = LocUtils()
+        self.loc_utils = LocUtils(self.config_utils)
         self.servers = self.config_utils.get_server_list()
 
         # loc add/set <项目名字> <0-主世界 1-地狱 2-末地> <x y z>
