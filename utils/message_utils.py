@@ -1,6 +1,7 @@
 HELP_MESSAGE = """
 欢迎使用Xc_Star的Minecraft服务器管理插件
 /list 获取在线玩家列表
+/原图 可以获取上一次list的背景图
 /loc 查看服务器坐标
 /zz <X坐标> <Z坐标> 珍珠炮计算 (开发中)
 /task 查看当前工程 (开发中)

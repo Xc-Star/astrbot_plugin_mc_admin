@@ -34,5 +34,11 @@
         "type": "string",
         "hint": "会从这个文件夹里面随机选择一张图片作为背景图，默认路径为'~/astrbot_plugin_mc_admin/data/background_image'",
         "default": ""
+    },
+    "enable_get_image": {
+        "description": "开启获取原图",
+        "type": "bool",
+        "hint": "开启后发送 /原图 即可获取上一次list的的背景图",
+        "default": false
     }
 }

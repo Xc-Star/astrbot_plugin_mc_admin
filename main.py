@@ -13,7 +13,7 @@ from astrbot.core.platform.sources.aiocqhttp.aiocqhttp_message_event import (
     "astrbot_plugin_mc_admin",
     "Xc_Star",
     "这是 MC服务器 的管理插件，支持list，珍珠炮落点计算，服务器工程坐标，备货清单，白名单管理等功能",
-    "0.3.2",
+    "0.3.3",
     "https://github.com/Xc-Star/astrbot_plugin_mc_admin"
 )
 class McAdminPlugin(Star):
@@ -48,11 +48,17 @@ class McAdminPlugin(Star):
         yield event.plain_result(result)
 
     @filter.command("list")
-    async def list(self, event: AstrMessageEvent):
+    async def list_players(self, event: AstrMessageEvent):
         if event.get_group_id() not in self.config.get('enabled_groups'):
             return
         result = await self.command_utils.list_players()
         yield event.image_result(result)
+
+    @filter.command("原图")
+    async def get_background_image(self, event: AstrMessageEvent):
+        if not self.config.get('enable_get_image'):
+            return
+        yield event.image_result(self.command_utils.get_image())
 
     async def terminate(self):
         """可选择实现异步的插件销毁方法，当插件被卸载/停用时会调用。"""

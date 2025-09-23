@@ -21,6 +21,10 @@ class ImageUtils:
 
     # 缓存模板内容
     _template_cache = None
+    # list图片路径
+    _background_image = None
+    def get_last_image(self):
+        return self._background_image
     
     def render_list_template(self, servers_data=None):
         """渲染HTML模板"""
@@ -137,6 +141,7 @@ class ImageUtils:
             random_image = random.choice(image_files)
             logger.debug(f"选择的背景图片: {random_image}")
             # 返回完整的图片路径
+            self._background_image = os.path.join(self.background_image_dir, random_image).__str__()
             return os.path.join(self.background_image_dir, random_image)
         except Exception as e:
             logger.error(f"获取随机背景图片失败: {str(e)}")

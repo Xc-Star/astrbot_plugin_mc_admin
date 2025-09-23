@@ -299,3 +299,6 @@ class CommandUtils:
 
         # 命令格式不正确，返回帮助信息
         return self.message.get_loc_help_message()
+
+    def get_image(self):
+        return self.image_utils.get_last_image()
