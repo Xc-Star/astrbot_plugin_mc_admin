@@ -5,10 +5,8 @@ import json
 import random
 from PIL import Image
 from .config_utils import ConfigUtils
-import time
 import asyncio
 from astrbot.api import logger
-import time
 
 class ImageUtils:
     def __init__(self, config_utils: ConfigUtils):
@@ -198,9 +196,7 @@ class ImageUtils:
         修复html2image生成出来的图片底下有白边的bug
         读取到图片，裁切图片后返回新的url
         """
-        start = time.time()
         image = Image.open(url)
         image = image.crop((0, 0, image.width, image.height - 100))
         image.save(url)
-        logger.info(f'修复图片耗时：{time.time() - start}')
         return url

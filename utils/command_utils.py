@@ -1,13 +1,9 @@
-import time
-
-from .message_utils import MessageUtils
 from astrbot.api.event import AstrMessageEvent
-from .rcon import Rcon
+from .rcon_pool import get_rcon_pool
 from .config_utils import ConfigUtils
 from .image_utils import ImageUtils
 from .message_utils import MessageUtils
 from astrbot.api import logger
-from .pojo.loc_result import LocResult
 from astrbot.core import AstrBotConfig
 from .loc_utils import LocUtils
 from .pojo.loc import Loc
@@ -21,6 +17,7 @@ class CommandUtils:
         self.image_utils = ImageUtils(self.config_utils)
         self.loc_utils = LocUtils(self.config_utils)
         self.servers = self.config_utils.get_server_list()
+        self.rcon_pool = get_rcon_pool()
 
         # loc add/set <项目名字> <0-主世界 1-地狱 2-末地> <x y z>
         self.loc_add_pattern = r'^loc add\s+([\w\\s]+?)\s+([012])\s+(-?\d+)\s+(-?\d+)\s+(-?\d+)$'
@@ -35,7 +32,7 @@ class CommandUtils:
             # 截取命令
             parts = msg.split()
             command = ' '.join(parts[1:])
-            return self.wl(command, event)
+            return await self.wl(command, event)
 
         # 获取命令长度
         arr = msg.split(' ')
@@ -56,10 +53,14 @@ class CommandUtils:
                 if server is None:
                     return "没有找到服务器"
 
-                rcon = Rcon(host=server["host"], password=server["password"], port=int(server["port"]))
                 match = re.match(self.mc_command_pattern, msg)
                 command = match.group(1)
-                return rcon.send_command(command)
+                return await self.rcon_pool.send_command(
+                    host=server["host"], 
+                    password=server["password"], 
+                    port=int(server["port"]), 
+                    command=command
+                )
 
         # 默认返回帮助信息
         return self.message.get_help_message()
@@ -73,14 +74,17 @@ class CommandUtils:
         # 遍历服务器列表
         servers_players = dict()
         for server in self.servers:
-            # 发送命令，如果init抛异常，则跳过此次连接
+            # 发送命令，如果连接失败则跳过此次连接
             try:
-                rcon = Rcon(host=server["host"], password=server["password"], port=int(server["port"]))
-            except:
-                logger.error(f"服务器 {server['name']} 连接失败")
+                res = await self.rcon_pool.send_command(
+                    host=server["host"], 
+                    password=server["password"], 
+                    port=int(server["port"]), 
+                    command="list"
+                )
+            except Exception as e:
+                # logger.error(f"服务器 {server['name']} 连接失败: {e}")
                 continue
-
-            res = rcon.send_command("list")
 
             # 分割玩家列表，防止玩家ID过短导致报错
             try:
@@ -99,8 +103,16 @@ class CommandUtils:
 
             # 白名单比对
             if self.config_utils.enable_whitelist_compare:
-                rcon = Rcon(host=server["host"], password=server["password"], port=int(server["port"]))
-                wl = rcon.send_command('whitelist list')
+                try:
+                    wl = await self.rcon_pool.send_command(
+                        host=server["host"], 
+                        password=server["password"], 
+                        port=int(server["port"]), 
+                        command='whitelist list'
+                    )
+                except Exception as e:
+                    logger.error(f"服务器 {server['name']} 白名单查询失败: {e}")
+                    continue
                 if wl == 'There are no whitelisted players':
                     whitelist_list = []
                     pass
@@ -151,7 +163,7 @@ class CommandUtils:
         # 检查是否以假人前缀开头（忽略大小写）
         return player_lower.startswith(prefix_lower)
 
-    def wl(self, msg: str, event: AstrMessageEvent) -> str:
+    async def wl(self, msg: str, event: AstrMessageEvent) -> str:
         """处理白名单命令的函数"""
 
         # 管理员权限
@@ -163,9 +175,13 @@ class CommandUtils:
 
             for server in self.servers:
                 try:
-                    rcon = Rcon(host=server['host'], password=server['password'], port=int(server['port']))
                     # 白名单列表
-                    wl = rcon.send_command(f'whitelist list')
+                    wl = await self.rcon_pool.send_command(
+                        host=server['host'], 
+                        password=server['password'], 
+                        port=int(server['port']), 
+                        command='whitelist list'
+                    )
                     if wl == 'There are no whitelisted players':
                         return '暂无白名单'
                     else:
@@ -190,9 +206,14 @@ class CommandUtils:
         if arr[1] == 'add' or arr[1] == 'remove':
             for server in self.servers:
                 try:
-                    rcon = Rcon(host=server['host'], password=server['password'], port=int(server['port']))
-                    rcon.send_command(f'whitelist {arr[1]} {arr[2]}')
-                except:
+                    await self.rcon_pool.send_command(
+                        host=server['host'], 
+                        password=server['password'], 
+                        port=int(server['port']), 
+                        command=f'whitelist {arr[1]} {arr[2]}'
+                    )
+                except Exception as e:
+                    # logger.error(f"服务器 {server['name']} 白名单操作失败: {e}")
                     continue
             method = '添加到' if arr[1] == 'add' else '移除'
             return f'已将{arr[2] + method}白名单'
