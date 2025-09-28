@@ -1,5 +1,6 @@
 import asyncio
 import threading
+import time
 from typing import Dict, Optional
 from concurrent.futures import ThreadPoolExecutor
 from mcrcon import MCRcon
@@ -16,7 +17,7 @@ class RconConnection:
         self.timeout = timeout
         self._rcon: Optional[MCRcon] = None
         self._lock = threading.Lock()
-        self._last_used = asyncio.get_event_loop().time()
+        self._last_used = time.time()  # 使用time.time()而不是asyncio.get_event_loop().time()
         self._is_connected = False
     
     def _connect(self):
@@ -53,7 +54,7 @@ class RconConnection:
                 if not self._is_connected:
                     self._connect()
                 
-                self._last_used = asyncio.get_event_loop().time()
+                self._last_used = time.time()  # 使用time.time()而不是asyncio.get_event_loop().time()
                 result = self._rcon.command(command)
                 return result
             except Exception as e:
@@ -68,7 +69,7 @@ class RconConnection:
     
     def get_idle_time(self) -> float:
         """获取空闲时间（秒）"""
-        return asyncio.get_event_loop().time() - self._last_used
+        return time.time() - self._last_used
 
 
 class RconPool:
@@ -146,7 +147,7 @@ class RconPool:
                 await asyncio.sleep(60)  # 每分钟检查一次
                 
                 with self._lock:
-                    current_time = asyncio.get_event_loop().time()
+                    current_time = time.time()
                     
                     for server_key, connections in list(self._connections.items()):
                         # 移除空闲时间过长的连接
