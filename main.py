@@ -4,12 +4,13 @@ from astrbot.api import logger
 from astrbot.core import AstrBotConfig
 from .utils import *
 from .utils.rcon_pool import close_rcon_pool
+from .utils import in_enabled_groups, requires_enabled
 
 @register(
     "astrbot_plugin_mc_admin",
     "Xc_Star",
     "这是 MC服务器 的管理插件，支持list，珍珠炮落点计算，服务器工程坐标，备货清单，白名单管理等功能",
-    "0.3.5",
+    "0.3.6",
     "https://github.com/Xc-Star/astrbot_plugin_mc_admin"
 )
 class McAdminPlugin(Star):
@@ -28,35 +29,29 @@ class McAdminPlugin(Star):
         yield event.plain_result(self.config.__str__())
         
     @filter.command("mc")
+    @in_enabled_groups()
     async def mc(self, event: AstrMessageEvent):
-        if event.get_group_id() not in self.config.get('enabled_groups'):
-            return
         msg = event.message_str
         result = await self.command_utils.mc(msg, event)
         yield event.plain_result(result)
 
     @filter.command("loc")
+    @in_enabled_groups()
     async def loc(self, event: AstrMessageEvent):
-        if event.get_group_id() not in self.config.get('enabled_groups'):
-            return
         msg = event.message_str
         result = await self.command_utils.loc(msg, event)
         yield event.plain_result(result)
 
     @filter.command("list")
+    @in_enabled_groups()
     async def list_players(self, event: AstrMessageEvent):
-        if event.get_group_id() not in self.config.get('enabled_groups'):
-            return
         result = await self.command_utils.list_players()
         yield event.image_result(result)
 
     @filter.command("原图")
+    @in_enabled_groups()
+    @requires_enabled("enable_get_image", "获取原图功能暂未启用", allow_admin_bypass=True)
     async def get_background_image(self, event: AstrMessageEvent):
-        if event.get_group_id() not in self.config.get('enabled_groups'):
-            return
-        if not self.config.get('enable_get_image') and not event.is_admin():
-            yield event.plain_result("获取原图功能暂未启用")
-            return
         yield event.image_result(self.command_utils.get_image())
 
     async def terminate(self):

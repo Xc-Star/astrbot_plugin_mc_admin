@@ -3,15 +3,30 @@ from .rcon_pool import get_rcon_pool
 from .config_utils import ConfigUtils
 from .image_utils import ImageUtils
 from .message_utils import MessageUtils
+from .command_helpers import (
+    PERMISSION_DENIED,
+    LOC_ADD_RE,
+    LOC_SET_RE,
+    MC_COMMAND_RE,
+    find_server_by_name,
+    send_command,
+    parse_list_players,
+    get_whitelist,
+    split_players_by_whitelist,
+    split_players_by_prefix,
+)
 from astrbot.api import logger
 from astrbot.core import AstrBotConfig
 from .loc_utils import LocUtils
 from .pojo.loc import Loc
 import re
+import asyncio
+from typing import Optional, List, Dict, Tuple
 
 
 class CommandUtils:
     def __init__(self, config: AstrBotConfig):
+        self.PERMISSION_DENIED = PERMISSION_DENIED
         self.config_utils = ConfigUtils(config)
         self.message = MessageUtils()
         self.image_utils = ImageUtils(self.config_utils)
@@ -19,113 +34,51 @@ class CommandUtils:
         self.servers = self.config_utils.get_server_list()
         self.rcon_pool = get_rcon_pool()
 
-        # loc add/set <项目名字> <0-主世界 1-地狱 2-末地> <x y z>
-        self.loc_add_pattern = r'^loc add\s+([\w\\s]+?)\s+([012])\s+(-?\d+)\s+(-?\d+)\s+(-?\d+)$'
-        self.loc_set_pattern = r'^loc set\s+([\w\\s]+?)\s+([012])\s+(-?\d+)\s+(-?\d+)\s+(-?\d+)$'
-        self.mc_command_pattern = r'^mc command \w+ (.*)$'
+        # 常量/正则交由 helper 管理
 
     async def mc(self, msg: str, event: AstrMessageEvent) -> str:
         """处理mc命令的函数"""
 
         # 优先处理mc wl
         if msg.startswith('mc wl'):
-            # 截取命令
             parts = msg.split()
             command = ' '.join(parts[1:])
             return await self.wl(command, event)
 
-        # 获取命令长度
         arr = msg.split(' ')
 
-        # 长度大于等于3的命令。如：mc command 生存服 time set 0
-        if len(arr) >= 3:
-            if arr[1] == 'command':
-                # 管理员权限
-                if not event.is_admin():
-                    return '我才不听你的呢'
+        # mc command <服务器> <命令...>
+        if len(arr) >= 3 and arr[1] == 'command':
+            if not event.is_admin():
+                return self.PERMISSION_DENIED
+            server = find_server_by_name(self.servers, arr[2])
+            if server is None:
+                return "没有找到服务器"
+            match = MC_COMMAND_RE.match(msg)
+            command = match.group(1) if match else ''
+            return await send_command(self.rcon_pool, server, command)
 
-                # 获取服务器Rcon连接参数
-                server = None
-                for s in self.servers:
-                    if s['name'] == arr[2]:
-                        server = s
-                        break
-                if server is None:
-                    return "没有找到服务器"
-
-                match = re.match(self.mc_command_pattern, msg)
-                command = match.group(1)
-                return await self.rcon_pool.send_command(
-                    host=server["host"], 
-                    password=server["password"], 
-                    port=int(server["port"]), 
-                    command=command
-                )
-
-        # 默认返回帮助信息
         return self.message.get_help_message()
 
     async def list_players(self):
         """处理list命令的函数"""
 
-        # 获取服务器列表
         bot_prefix = self.config_utils.get_bot_prefix()
 
-        # 遍历服务器列表
-        servers_players = dict()
-        for server in self.servers:
-            # 发送命令，如果连接失败则跳过此次连接
+        async def process_server(server: Dict) -> Optional[Tuple[str, Dict[str, List[str]]]]:
             try:
-                res = await self.rcon_pool.send_command(
-                    host=server["host"], 
-                    password=server["password"], 
-                    port=int(server["port"]), 
-                    command="list"
-                )
-            except Exception as e:
-                # logger.error(f"服务器 {server['name']} 连接失败: {e}")
-                continue
+                res = await send_command(self.rcon_pool, server, "list")
+            except Exception:
+                return None
+            players = parse_list_players(res)
+            if not players:
+                return server["name"], {"bot_players": [], "real_players": []}
 
-            # 分割玩家列表，防止玩家ID过短导致报错
-            try:
-                if ':' not in res:
-                    continue
-                players_str = res.split(':')[1]
-                if not players_str.strip():
-                    servers_players[server["name"]] = {
-                        "bot_players": [],
-                        "real_players": []
-                    }
-                    continue
-                players = [p.strip() for p in players_str.split(',') if p.strip()]
-            except (IndexError, AttributeError):
-                continue
-
-            # 白名单比对
             if self.config_utils.enable_whitelist_compare:
-                try:
-                    wl = await self.rcon_pool.send_command(
-                        host=server["host"], 
-                        password=server["password"], 
-                        port=int(server["port"]), 
-                        command='whitelist list'
-                    )
-                except Exception as e:
-                    logger.error(f"服务器 {server['name']} 白名单查询失败: {e}")
-                    continue
-                if wl == 'There are no whitelisted players':
-                    whitelist_list = []
-                    pass
-                else:
-                    players_start = wl.find(':') + 1
-                    players_str = wl[players_start:].strip()
-                    whitelist_list = [player.strip() for player in players_str.split(',')]
-                bot_players = [p for p in players if p not in whitelist_list]
-                real_players = [p for p in players if p in whitelist_list]
-            # 假人前缀
+                wl = await get_whitelist(self.rcon_pool, server)
+                bot_players, real_players = split_players_by_whitelist(players, wl)
             else:
-                bot_players = [p for p in players if self.is_bot_player(p, bot_prefix)]
-                real_players = [p for p in players if not self.is_bot_player(p, bot_prefix)]
+                bot_players, real_players = split_players_by_prefix(players, bot_prefix)
             """
             servers_players: {
                 "server1": {
@@ -137,19 +90,20 @@ class CommandUtils:
                     "real_players": ["SCT1", "SCT2"]
                 }
             }
-
             """
-            servers_players[server["name"]] = {
-                "bot_players": bot_players,
-                "real_players": real_players
-            }
+            return server["name"], {"bot_players": bot_players, "real_players": real_players}
 
+        tasks = [process_server(s) for s in self.servers]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
 
-        # 生成在线玩家列表图片
+        servers_players: Dict[str, Dict[str, List[str]]] = {}
+        for r in results:
+            if isinstance(r, tuple) and len(r) == 2:
+                name, data = r
+                servers_players[name] = data
+
         image_path = await self.image_utils.generate_list_image(servers_players)
         return image_path
-
-        # 处理假人前缀的大小写混用和中英文混用
 
     def is_bot_player(self, player_name, bot_prefix):
         """判断是否是bot"""
@@ -168,29 +122,17 @@ class CommandUtils:
 
         # 管理员权限
         if not event.is_admin():
-            return '我才不听你的呢'
+            return PERMISSION_DENIED
 
         # 优先处理查询列表
         if msg == 'wl list':
-
             for server in self.servers:
                 try:
-                    # 白名单列表
-                    wl = await self.rcon_pool.send_command(
-                        host=server['host'], 
-                        password=server['password'], 
-                        port=int(server['port']), 
-                        command='whitelist list'
-                    )
-                    if wl == 'There are no whitelisted players':
+                    wl_list = await get_whitelist(self.rcon_pool, server)
+                    if not wl_list:
                         return '暂无白名单'
-                    else:
-                        players_start = wl.find(':') + 1
-                        players_str = wl[players_start:].strip()
-                        players_list = [player.strip() for player in players_str.split(',')]
-                        players_str = '\n'.join(players_list)
-                        return players_str
-                except:
+                    return '\n'.join(wl_list)
+                except Exception:
                     continue
             return "服务器链接错误"
 
@@ -199,22 +141,16 @@ class CommandUtils:
 
         # 长度不符合返回帮助信息
         if len(arr) != 3:
-            message = MessageUtils()
-            return message.get_help_message()
+            return self.message.get_help_message()
 
         # 白名单操作
         if arr[1] == 'add' or arr[1] == 'remove':
-            for server in self.servers:
+            async def do_op(server: Dict):
                 try:
-                    await self.rcon_pool.send_command(
-                        host=server['host'], 
-                        password=server['password'], 
-                        port=int(server['port']), 
-                        command=f'whitelist {arr[1]} {arr[2]}'
-                    )
-                except Exception as e:
-                    # logger.error(f"服务器 {server['name']} 白名单操作失败: {e}")
-                    continue
+                    await send_command(self.rcon_pool, server, f'whitelist {arr[1]} {arr[2]}')
+                except Exception:
+                    pass
+            await asyncio.gather(*[do_op(s) for s in self.servers], return_exceptions=True)
             method = '添加到' if arr[1] == 'add' else '移除'
             return f'已将{arr[2] + method}白名单'
 
@@ -250,7 +186,7 @@ class CommandUtils:
             return self.loc_utils.list_loc()
 
         elif msg.startswith('loc add'):
-            match = re.match(self.loc_add_pattern, msg)
+            match = LOC_ADD_RE.match(msg)
             if not match:
                 return "请使用: /loc add <项目名字> <0-主世界 1-地狱 2-末地> <x y z>"
 
@@ -276,7 +212,7 @@ class CommandUtils:
             return self.loc_utils.remove_loc(name)
 
         elif msg.startswith('loc set'):
-            match = re.match(self.loc_set_pattern, msg)
+            match = LOC_SET_RE.match(msg)
             if not match:
                 return "请使用: /loc set <项目名字> <0-主世界 1-地狱 2-末地> <x y z>"
 
