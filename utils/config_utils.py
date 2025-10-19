@@ -66,17 +66,6 @@ class ConfigUtils:
         with open(path, 'w', encoding='utf-8') as f:
             json.dump(json_str, f, ensure_ascii=False, indent=4)
 
-    def get_task_list(self):
-        path = os.path.join(self.get_plugin_path(), 'data', 'task.json')
-        with open(path, 'r', encoding='utf-8') as f:
-            return json.load(f)['server_task']
-
-    def set_task_list(self, list: dict):
-        path = os.path.join(self.get_plugin_path(), 'data', 'task.json')
-        json_str = {'server_task': list}
-        with open(path, 'w', encoding='utf-8') as f:
-            json.dump(json_str, f, ensure_ascii=False, indent=4)
-
     def get_plugin_path(self):
         """获取当前插件的路径
 
@@ -88,12 +77,8 @@ class ConfigUtils:
         # 获取插件的根目录（向上两级目录：utils目录 -> 插件根目录）
         return os.path.dirname(os.path.dirname(current_file_path))
 
-    def get_task_no_upload_file_list(self):
-        path = os.path.join(self.get_plugin_path(), 'data', 'task_no_upload_file.json')
-        with open(path, 'r', encoding='utf-8') as f:
-            return json.load(f)
-
-    def set_task_no_upload_file_list(self, list: list):
-        path = os.path.join(self.get_plugin_path(), 'data', 'task_no_upload_file.json')
-        with open(path, 'w', encoding='utf-8') as f:
-            json.dump(list, f, ensure_ascii=False, indent=4)
+    def get_db_path(self):
+        # 获取数据库的地址
+        plugin_path = self.get_plugin_path()
+        db_path = os.path.join(plugin_path, 'data', 'data_v3.db')
+        return db_path

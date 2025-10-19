@@ -10,7 +10,8 @@ from astrbot.api import logger
 
 class ImageUtils:
     def __init__(self, config_utils: ConfigUtils):
-        self.hti = Html2Image()
+        output = os.path.join(config_utils.get_plugin_path(), "data")
+        self.hti = Html2Image(output_path=output, custom_flags=['--no-sandbox', '--disable-dev-shm-usage'])
         current_file_path = os.path.abspath(__file__)
         plugin_path = os.path.dirname(os.path.dirname(current_file_path))
         self.template_dir = os.path.join(plugin_path, 'template')

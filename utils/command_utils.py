@@ -1,4 +1,8 @@
+import json
+
 from astrbot.api.event import AstrMessageEvent
+from cachetools import TTLCache
+
 from .rcon_pool import get_rcon_pool
 from .config_utils import ConfigUtils
 from .image_utils import ImageUtils
@@ -14,30 +18,28 @@ from .command_helpers import (
     get_whitelist,
     split_players_by_whitelist,
     split_players_by_prefix,
-    Task_ADD_RE,
 )
 from astrbot.api import logger
 from astrbot.core import AstrBotConfig
 from .loc_utils import LocUtils
-from .task_utils import TaskUtils
 from .pojo.loc import Loc
+from .task_utils import TaslUtils
 import re
 import asyncio
 from typing import Optional, List, Dict, Tuple
-import json
-from html2image import Html2Image
-from jinja2 import Environment, FileSystemLoader
-import os
+import sqlite3
+
 class CommandUtils:
-    def __init__(self, config: AstrBotConfig):
+    def __init__(self, config: AstrBotConfig, conn: sqlite3.Connection):
+
         self.PERMISSION_DENIED = PERMISSION_DENIED
         self.config_utils = ConfigUtils(config)
         self.message = MessageUtils()
         self.image_utils = ImageUtils(self.config_utils)
         self.loc_utils = LocUtils(self.config_utils)
-        self.task_utils = TaskUtils(self.config_utils)
         self.servers = self.config_utils.get_server_list()
         self.rcon_pool = get_rcon_pool()
+        self.task_utils = TaslUtils(self.config_utils, conn)
 
         # 常量/正则交由 helper 管理
 
@@ -84,18 +86,6 @@ class CommandUtils:
                 bot_players, real_players = split_players_by_whitelist(players, wl)
             else:
                 bot_players, real_players = split_players_by_prefix(players, bot_prefix)
-            """
-            servers_players: {
-                "server1": {
-                    "bot_players": ["bot_Xc_Star1", "bot_Xc_Star2"],
-                    "real_players": ["Xc_Star1", "Xc_Star2"]
-                },
-                "server2": {
-                    "bot_players": ["bot_SCT1", "bot_SCT2"],
-                    "real_players": ["SCT1", "SCT2"]
-                }
-            }
-            """
             return server["name"], {"bot_players": bot_players, "real_players": real_players}
 
         tasks = [process_server(s) for s in self.servers]
@@ -122,8 +112,8 @@ class CommandUtils:
         # 检查是否以假人前缀开头（忽略大小写）
         return player_lower.startswith(prefix_lower)
 
-        # 验证坐标范围
-    def validate_coordinates(coordinates: str) -> tuple[bool, str]:
+    # 验证坐标范围
+    def validate_coordinates(self, coordinates: str) -> tuple[bool, str]:
         try:
             coord_parts = coordinates.split()
             if len(coord_parts) != 3:
@@ -184,8 +174,6 @@ class CommandUtils:
         /loc <项目名字> 查看项目地址
         /loc set <项目名字> <0-主世界 1-地狱 2-末地> <坐标> 修改项目坐标
         """
-
-
 
         # list
         if msg.startswith('loc list'):
@@ -264,74 +252,136 @@ class CommandUtils:
         # 命令格式不正确，返回帮助信息
         return self.message.get_loc_help_message()
 
-    async def task(self, msg: str, event: AstrMessageEvent) -> dict:
+    async def task(self, msg: str, event: AstrMessageEvent, task_temp:TTLCache) -> dict:
         """处理task命令的函数
-
         命令格式:
-        /task add <项目名字> <0-主世界 1-地狱 2-末地> <坐标> 添加服务器项目
-        /task remove <项目名字> 删除服务器项目
-        /task list 服务器项目坐标列表
-        /task <项目名字> 查看项目地址
-        /task commit <项目名字> <材料名称> <是否完成> 提交材料信息
+        /task add <工程名字> <0-主世界 1-地狱 2-末地> <坐标> 添加服务器工程
+        /task remove <工程名字> 删除服务器工程
+        /task list 服务器工程坐标列表
+        /task <工程名字> 查看服务器工程详细信息
+        /task set <工程名字> <0-主世界 1-地狱 2-末地> <坐标> 修改服务器工程
+        /task commit <工程id> <材料id> <已备数量> 提交材料的备货情况
+        /task export <工程id> <0-txt 1-csv 2-excel> 导出工程相关信息 (正在开发中)
+        函数返回结构：
+        返回的为文本类型时：{"type":"text","msg":""}
+        返回的为图片链接时：{"type":"image","msg":""}
         """
-        #list
-        if msg.startswith('task list'):
-            # 显示所有位置列表
-            return self.task_utils.list_task()
-
-        elif msg.startswith('task add'):
-            match = Task_ADD_RE.match(msg)
-            if not match:
-                return {"type":"text","msg":"请使用: /task add <项目名字> <0-主世界 1-地狱 2-末地> <x y z>"}
-
-            name, location, x, y, z = match.groups()
-            dimension = f"{x} {y} {z}"
-            no_upload_file_list = self.config_utils.get_task_no_upload_file_list()
-            no_upload_file_list[event.message_obj.session_id] = name
-            self.config_utils.set_task_no_upload_file_list(no_upload_file_list)
-            return self.task_utils.add_task(event.message_obj.session_id, name, location, dimension, event.message_obj.sender.nickname)
+        if msg.startswith('task add'):
+            # 添加工程
+            """
+            命令结构: task add <工程名字> <0-主世界 1-地狱 2-末地> <坐标>
+            不符合命令结构 -> 返回命令结构
+            符合命令结构 -> 记录相关信息(创建人、工程名称、工程纬度、工程坐标)[如果存在则替换信息] -> 持续检测创建人的消息 -> 判断消息类型是否为文件(是)|pass(非) [此流程在main文件] 
+            -> 判断后缀是否为合法后缀(是)|发送提示(非) -> 解析文件(是)|返回提示(非) -> 上传数据库(解析成功)|发送提示(解析失败)
+            """
+            parts = msg.split(maxsplit=6)
+            if len(parts) != 7:
+                return {"type": "text",
+                        "msg": "请使用: /task add <工程名字> <0-主世界 1-地狱 2-末地> <坐标>"}
+            coordinates = f"{parts[4]} {parts[5]} {parts[6]}"
+            is_valid, error_msg = self.validate_coordinates(coordinates)
+            if not is_valid:
+                return {"type": "text", "msg": error_msg}
+            task = self.task_utils.get_task_by_name(parts[2])
+            if task["code"] == 200:
+                return {"type":"text", "msg": f"工程{parts[2]}存在"}
+            for i in task_temp:
+                if task_temp[i]["name"] == parts[2]:
+                    return {"type":"text", "msg": f"工程{parts[2]}已被{task_temp[i]['CreateUser']}创建但未上传材料列表文件"}
+            task_temp[event.session_id] = {
+                "name": parts[2],
+                "location": parts[3],
+                "dimension": coordinates,
+                "CreateUser": event.message_obj.sender.nickname
+            }
+            return {"type":"text", "msg": "新增成功，请在10分钟内发送材料列表文件，支持txt和csv"}
 
         elif msg.startswith('task remove'):
-            # loc remove <项目名字>
+            # 删除工程
+            """
+            命令结构：task remove <工程名字>
+            处理逻辑:
+            不符合命令结构 -> 返回命令结构
+            符合命令结构 -> 调用数据库 -> 判断工程是否存在 -> 删除相关数据(存在)｜返回提示(不存在) -> 提交数据库修改
+            """
+            # 符合命令结构 -> 调用数据库 -> 删除相关数据 -> 提交数据库修改
+            # 不符合命令结构 -> 返回task remove命令的结构
             parts = msg.split(maxsplit=2)
             if len(parts) != 3:
-                return {"type": "text","msg": "请使用: /task remove <项目名字>"}
+                return {"type":"text","msg":"请使用: /task remove <项目名字>"}
+
             name = parts[2]
-            return self.task_utils.remove_task(name)
+            return {"type":"text","msg":self.task_utils.remove_task(name)}
+
+        elif msg.startswith('task list'):
+            # 工程列表
+            # 返回工程列表
+            return {"type":"text","msg":self.task_utils.get_task_list()}
 
         elif msg.startswith('task commit'):
-            match = self.parse_task_commit(msg, event)
-            if match['code'] == 500:
-                return {"type":"text","msg":match['msg']}
-            return self.task_utils.commit_task(match['msg'])
+            # 提交材料
+            """
+            命令结构：task commit <工程id> <材料id> <已备数量> 提交材料的备货情况
+            处理逻辑:
+            不符合命令结构 -> 返回命令结构
+            符合命令结构 -> 调用数据库 -> 判断工程是否存在 -> 修改数据(存在)｜返回提示(不存在) -> 提交数据修改(存在)
+            """
+            parts = msg.split(maxsplit=5)
+            if len(parts) != 6:
+                return {"type": "text", "msg": "请使用: /task commit <工程名称> <材料序号> <已备数量(单位个)> <材料所在假人> 提交材料的备货情况"}
 
-        elif msg.startswith('task '):
+            return {"type":"text","msg":self.task_utils.commit_task(parts, event)}
+
+        elif msg.startswith('task set'):
+            # 修改工程信息
+            """
+            命令结构：/task set <工程名字> <新工程名称> <0-主世界 1-地狱 2-末地> <坐标(x y z)>
+            处理逻辑：
+            不符合命令结构 -> 返回命令结构
+            符合命令结构 -> 调用数据库 -> 判断工程是否存在 -> 修改数据(存在)｜返回提示(不存在) -> 提交数据修改
+            PS:暂时不支持修改材料列表，在后续版本进行新增
+            """
+            parts = msg.split(maxsplit=7)
+            if len(parts) != 8:
+                return {"type": "text",
+                        "msg": "请使用: /task set <工程名字> <新工程名称> <0-主世界 1-地狱 2-末地> <坐标>"}
+            coordinates = f"{parts[5]} {parts[6]} {parts[7]}"
+            is_valid, error_msg = self.validate_coordinates(coordinates)
+            if not is_valid:
+                return {"type": "text", "msg": error_msg}
+
+            return {"type": "text", "msg": self.task_utils.set_task(parts, event)}
+            pass
+
+        # TODO task export
+        elif msg.startswith('task export'):
+            # 导出工程信息
+            """
+            处理逻辑：
+            不符合命令结构 -> 返回命令结构
+            符合命令结构 -> 判断工程是否存在 -> 判断导出类型(存在)｜返回提示(不存在) -> 导出文件(存在) -> 发送文件(存在)"""
+            pass
+
+        elif msg.startswith('task'):
+            """
+            处理逻辑：
+            task不带参数 - > 返回task命令的help
+            task带名称 -> 返回工程详情(图片)
+            """
             parts = msg.split(maxsplit=1)
+            # task不带参数 - > 返回task命令的help
             if len(parts) != 2:
-                return self.message.get_task_help_message()
+                print(111)
+                return {"type":"text","msg":self.message.get_task_help_message()}
+            # task带名称 -> 返回工程详情(图片)
             task_name = parts[1]
             task = self.task_utils.get_task_by_name(task_name)
-            if task is None:
-                return {"type": "text", "msg": f"项目{task_name}不存在"}
-            templates = os.path.join(self.config_utils.get_plugin_path(), "template")
-            output = os.path.join(self.config_utils.get_plugin_path(), "data")
-            env = Environment(loader=FileSystemLoader(templates))
-            template = env.get_template("task.html")
-            background_image_style = self.image_utils.get_random_background_image()
-            html_content = template.render({"data": task,"background_image_style":background_image_style})
-            hti = Html2Image(output_path=output, custom_flags=['--no-sandbox', '--disable-dev-shm-usage'])
-            base_heigth = 134
-            task_total = len(task["MaterialList"])
-            coutent_heigth = task_total * 47
-            heigth = max(600, base_heigth + coutent_heigth)
-            hti.screenshot(html_str=html_content, save_as="task.png", size=(650, heigth))
-            path = os.path.join(output, "task.png")
-            path = self.image_utils.image_fix(path)
-            return {"type": "img","msg": path}
-        else:
-            return {"type": "text","msg": self.message.get_task_help_message()}
+            if task["code"] != 200:
+                return {"type":"text","msg":f"工程：{task_name}不存在"}
+            url = self.task_utils.render(task["msg"])
+            return {"type":"image", "msg":url}
 
-    async def set_materia(self,event: AstrMessageEvent, name) -> dict:
+    async def material(self, task_temp:TTLCache, event: AstrMessageEvent) -> str:
         raw_message = event.message_obj.raw_message
         match = re.search(r'<Event, (\{.*})>', str(raw_message), re.DOTALL)
         event_dict_str = match.group(1).replace("'", '\"')
@@ -339,7 +389,7 @@ class CommandUtils:
         message = json_dict.get('message')
         if message:
             if message[0]['type'] == 'text':
-                return {"code":200,"msg":f"尊敬的用户：{event.message_obj.sender.nickname}您创建了{name}工程,但是还未上传材料列表文件"}
+                return f"尊敬的用户：{event.message_obj.sender.nickname}您创建了{task_temp[event.message_obj.session_id]['name']}工程,但是还未上传材料列表文件"
             elif message[0]['type'] == 'file':
                 client = event.bot  # 得到 client
                 payloads = {
@@ -347,24 +397,7 @@ class CommandUtils:
                     "file_id": json_dict['message'][0]['data']['file_id'],
                 }
                 ret = await client.api.call_action('get_group_file_url', **payloads)
-                return {"code": 200, "msg": self.task_utils.download_task_material(ret['url'], json_dict['message'][0]['data']['file'], name)}
-        elif not message:
-            return {"code":500,"msg":f""}
+                return self.task_utils.task_material(ret['url'], json_dict['message'][0]['data']['file'], event.message_obj.session_id, task_temp)
+
     def get_image(self):
         return self.image_utils.get_last_image()
-
-    def parse_task_commit(self,text, event):
-        pattern = re.compile(r'^task commit (\S+) (\S+) (\S+) (\S+)$')
-        match = pattern.match(text)
-        if match:
-            return {"code":200,
-                    "msg":{
-                        'name': match.group(1),
-                        'materia': match.group(2),
-                        'status': match.group(3),
-                        "PersonInCharge": event.message_obj.sender.nickname,
-                        "location": match.group(4)
-                    }
-            }
-        else:
-            return {"code":500,"msg":'输入格式不正确，请使用 /task commit <项目名字> <材料名称> <是否完成>  <所在假人>'}

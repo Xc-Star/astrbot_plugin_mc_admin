@@ -4,12 +4,13 @@ HELP_MESSAGE = """
 /原图 可以获取上一次list的背景图
 /loc 查看服务器坐标
 /zz <X坐标> <Z坐标> 珍珠炮计算 (开发中)
-/task 查看当前工程 (开发中)
+/task 查看当前工程
 /mc wl add/remove <ID> 给玩家添加/移除白名单(管理员)
 /mc command <服务器名字> <command> 向指定服务器发送命令(管理员)
 """
 
 LOC_HELP_MESSAGE = """
+loc命令格式:
 /loc add <项目名字> <0-主世界 1-地狱 2-末地> <x y z> 添加服务器项目
 /loc remove <项目名字> 删除服务器项目
 /loc list 服务器项目坐标列表
@@ -18,11 +19,14 @@ LOC_HELP_MESSAGE = """
 """
 
 TASK_HELP_MESSAGE = """
-/task add 添加工程 (开发中)
-    (发送命令后发送投影生成的文件自动解析)
-/task list 服务器工程列表 (开发中)
-/task <工程名字> 查询工程的材料列表 (开发中)
-/task commit <工程名字> <提交材料的编号> <0-未完成 1-完成> <材料所在位置/假人> (开发中)
+task命令格式:
+/task add <工程名字> <0-主世界 1-地狱 2-末地> <坐标> 添加服务器工程
+/task remove <工程名字> 删除服务器工程
+/task list 服务器工程坐标列表
+/task <工程名字> 查看服务器工程详细信息
+/task set <工程名字> <0-主世界 1-地狱 2-末地> <坐标> 修改服务器工程
+/task commit <工程名称> <材料序号> <完成进度（已备数量）> <材料所在位置/假人> 提交材料的备货情况
+/task export <工程名称> <0-txt 1-csv 2-excel> 导出工程相关信息 (正在开发中)
 """
 
 class MessageUtils:
