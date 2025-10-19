@@ -19,10 +19,10 @@ LOC_HELP_MESSAGE = """
 
 TASK_HELP_MESSAGE = """
 /task add 添加工程 (开发中)
-    (发送命令后发材料列表的Excel文件，Excel文件可以通过v4.sctserver.top:81生成)
+    (发送命令后发送投影生成的文件自动解析)
 /task list 服务器工程列表 (开发中)
 /task <工程名字> 查询工程的材料列表 (开发中)
-/task commit <工程名字> <提交材料的编号> <完成进度> <材料所在位置/假人> (开发中)
+/task commit <工程名字> <提交材料的编号> <0-未完成 1-完成> <材料所在位置/假人> (开发中)
 """
 
 class MessageUtils:
@@ -34,3 +34,6 @@ class MessageUtils:
 
     def get_loc_help_message(self):
         return LOC_HELP_MESSAGE
+
+    def get_task_help_message(self):
+        return TASK_HELP_MESSAGE

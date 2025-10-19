@@ -9,6 +9,7 @@ PERMISSION_DENIED = '我才不听你的呢'
 # 预编译正则
 LOC_ADD_RE = re.compile(r'^loc add\s+([\w\\s]+?)\s+([012])\s+(-?\d+)\s+(-?\d+)\s+(-?\d+)$')
 LOC_SET_RE = re.compile(r'^loc set\s+([\w\\s]+?)\s+([012])\s+(-?\d+)\s+(-?\d+)\s+(-?\d+)$')
+Task_ADD_RE = re.compile(r'^task add\s+([\w\\s]+?)\s+([012])\s+(-?\d+)\s+(-?\d+)\s+(-?\d+)$')
 MC_COMMAND_RE = re.compile(r'^mc command \w+ (.*)$')
 
 

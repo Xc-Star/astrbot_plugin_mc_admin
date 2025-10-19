@@ -86,7 +86,7 @@ class ImageUtils:
             # 检查是否启用背景图片
             if self.enable_background_image:
                 # 从background_image_dir中随机选择一张图片作为背景
-                background_image = self._get_random_background_image()
+                background_image = self.get_random_background_image()
                 
                 if background_image:
                     # 将Windows路径转换为网页路径格式
@@ -107,7 +107,7 @@ class ImageUtils:
             # 失败时使用灰色背景
             return html_content.replace('{{ background_image_style }}', "background: #f0f0f0;")
 
-    def _get_random_background_image(self):
+    def get_random_background_image(self):
         """
         从background_image_dir文件夹中随机选择一张图片
         """

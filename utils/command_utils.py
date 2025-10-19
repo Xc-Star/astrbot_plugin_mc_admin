@@ -14,16 +14,20 @@ from .command_helpers import (
     get_whitelist,
     split_players_by_whitelist,
     split_players_by_prefix,
+    Task_ADD_RE,
 )
 from astrbot.api import logger
 from astrbot.core import AstrBotConfig
 from .loc_utils import LocUtils
+from .task_utils import TaskUtils
 from .pojo.loc import Loc
 import re
 import asyncio
 from typing import Optional, List, Dict, Tuple
-
-
+import json
+from html2image import Html2Image
+from jinja2 import Environment, FileSystemLoader
+import os
 class CommandUtils:
     def __init__(self, config: AstrBotConfig):
         self.PERMISSION_DENIED = PERMISSION_DENIED
@@ -31,6 +35,7 @@ class CommandUtils:
         self.message = MessageUtils()
         self.image_utils = ImageUtils(self.config_utils)
         self.loc_utils = LocUtils(self.config_utils)
+        self.task_utils = TaskUtils(self.config_utils)
         self.servers = self.config_utils.get_server_list()
         self.rcon_pool = get_rcon_pool()
 
@@ -117,6 +122,21 @@ class CommandUtils:
         # 检查是否以假人前缀开头（忽略大小写）
         return player_lower.startswith(prefix_lower)
 
+        # 验证坐标范围
+    def validate_coordinates(coordinates: str) -> tuple[bool, str]:
+        try:
+            coord_parts = coordinates.split()
+            if len(coord_parts) != 3:
+                return False, "坐标格式不正确，请提供x y z三个坐标值"
+
+            x, y, z = int(coord_parts[0]), int(coord_parts[1]), int(coord_parts[2])
+            # 验证坐标范围（Minecraft世界坐标范围）
+            if not (-30000000 <= x <= 30000000 and -30000000 <= z <= 30000000 and -64 <= y <= 368):
+                return False, "坐标超出有效范围"
+            return True, ""
+        except ValueError:
+            return False, "坐标必须为整数"
+
     async def wl(self, msg: str, event: AstrMessageEvent) -> str:
         """处理白名单命令的函数"""
 
@@ -165,20 +185,7 @@ class CommandUtils:
         /loc set <项目名字> <0-主世界 1-地狱 2-末地> <坐标> 修改项目坐标
         """
 
-        # 验证坐标范围
-        def validate_coordinates(coordinates: str) -> tuple[bool, str]:
-            try:
-                coord_parts = coordinates.split()
-                if len(coord_parts) != 3:
-                    return False, "坐标格式不正确，请提供x y z三个坐标值"
 
-                x, y, z = int(coord_parts[0]), int(coord_parts[1]), int(coord_parts[2])
-                # 验证坐标范围（Minecraft世界坐标范围）
-                if not (-30000000 <= x <= 30000000 and -30000000 <= z <= 30000000 and -64 <= y <= 368):
-                    return False, "坐标超出有效范围"
-                return True, ""
-            except ValueError:
-                return False, "坐标必须为整数"
 
         # list
         if msg.startswith('loc list'):
@@ -194,7 +201,7 @@ class CommandUtils:
             coordinates = f"{x} {y} {z}"
 
             # 验证坐标
-            is_valid, error_msg = validate_coordinates(coordinates)
+            is_valid, error_msg = self.validate_coordinates(coordinates)
             if not is_valid:
                 return error_msg
 
@@ -220,7 +227,7 @@ class CommandUtils:
             coordinates = f"{x} {y} {z}"
 
             # 验证坐标
-            is_valid, error_msg = validate_coordinates(coordinates)
+            is_valid, error_msg = self.validate_coordinates(coordinates)
             if not is_valid:
                 return error_msg
 
@@ -257,5 +264,107 @@ class CommandUtils:
         # 命令格式不正确，返回帮助信息
         return self.message.get_loc_help_message()
 
+    async def task(self, msg: str, event: AstrMessageEvent) -> dict:
+        """处理task命令的函数
+
+        命令格式:
+        /task add <项目名字> <0-主世界 1-地狱 2-末地> <坐标> 添加服务器项目
+        /task remove <项目名字> 删除服务器项目
+        /task list 服务器项目坐标列表
+        /task <项目名字> 查看项目地址
+        /task commit <项目名字> <材料名称> <是否完成> 提交材料信息
+        """
+        #list
+        if msg.startswith('task list'):
+            # 显示所有位置列表
+            return self.task_utils.list_task()
+
+        elif msg.startswith('task add'):
+            match = Task_ADD_RE.match(msg)
+            if not match:
+                return {"type":"text","msg":"请使用: /task add <项目名字> <0-主世界 1-地狱 2-末地> <x y z>"}
+
+            name, location, x, y, z = match.groups()
+            dimension = f"{x} {y} {z}"
+            no_upload_file_list = self.config_utils.get_task_no_upload_file_list()
+            no_upload_file_list[event.message_obj.session_id] = name
+            self.config_utils.set_task_no_upload_file_list(no_upload_file_list)
+            return self.task_utils.add_task(event.message_obj.session_id, name, location, dimension, event.message_obj.sender.nickname)
+
+        elif msg.startswith('task remove'):
+            # loc remove <项目名字>
+            parts = msg.split(maxsplit=2)
+            if len(parts) != 3:
+                return {"type": "text","msg": "请使用: /task remove <项目名字>"}
+            name = parts[2]
+            return self.task_utils.remove_task(name)
+
+        elif msg.startswith('task commit'):
+            match = self.parse_task_commit(msg, event)
+            if match['code'] == 500:
+                return {"type":"text","msg":match['msg']}
+            return self.task_utils.commit_task(match['msg'])
+
+        elif msg.startswith('task '):
+            parts = msg.split(maxsplit=1)
+            if len(parts) != 2:
+                return self.message.get_task_help_message()
+            task_name = parts[1]
+            task = self.task_utils.get_task_by_name(task_name)
+            if task is None:
+                return {"type": "text", "msg": f"项目{task_name}不存在"}
+            templates = os.path.join(self.config_utils.get_plugin_path(), "template")
+            output = os.path.join(self.config_utils.get_plugin_path(), "data")
+            env = Environment(loader=FileSystemLoader(templates))
+            template = env.get_template("task.html")
+            background_image_style = self.image_utils.get_random_background_image()
+            html_content = template.render({"data": task,"background_image_style":background_image_style})
+            hti = Html2Image(output_path=output, custom_flags=['--no-sandbox', '--disable-dev-shm-usage'])
+            base_heigth = 134
+            task_total = len(task["MaterialList"])
+            coutent_heigth = task_total * 47
+            heigth = max(600, base_heigth + coutent_heigth)
+            hti.screenshot(html_str=html_content, save_as="task.png", size=(650, heigth))
+            path = os.path.join(output, "task.png")
+            path = self.image_utils.image_fix(path)
+            return {"type": "img","msg": path}
+        else:
+            return {"type": "text","msg": self.message.get_task_help_message()}
+
+    async def set_materia(self,event: AstrMessageEvent, name) -> dict:
+        raw_message = event.message_obj.raw_message
+        match = re.search(r'<Event, (\{.*})>', str(raw_message), re.DOTALL)
+        event_dict_str = match.group(1).replace("'", '\"')
+        json_dict = json.loads(event_dict_str)
+        message = json_dict.get('message')
+        if message:
+            if message[0]['type'] == 'text':
+                return {"code":200,"msg":f"尊敬的用户：{event.message_obj.sender.nickname}您创建了{name}工程,但是还未上传材料列表文件"}
+            elif message[0]['type'] == 'file':
+                client = event.bot  # 得到 client
+                payloads = {
+                    "group_id": json_dict['group_id'],
+                    "file_id": json_dict['message'][0]['data']['file_id'],
+                }
+                ret = await client.api.call_action('get_group_file_url', **payloads)
+                return {"code": 200, "msg": self.task_utils.download_task_material(ret['url'], json_dict['message'][0]['data']['file'], name)}
+        elif not message:
+            return {"code":500,"msg":f""}
     def get_image(self):
         return self.image_utils.get_last_image()
+
+    def parse_task_commit(self,text, event):
+        pattern = re.compile(r'^task commit (\S+) (\S+) (\S+) (\S+)$')
+        match = pattern.match(text)
+        if match:
+            return {"code":200,
+                    "msg":{
+                        'name': match.group(1),
+                        'materia': match.group(2),
+                        'status': match.group(3),
+                        "PersonInCharge": event.message_obj.sender.nickname,
+                        "location": match.group(4)
+                    }
+            }
+        else:
+            return {"code":500,"msg":'输入格式不正确，请使用 /task commit <项目名字> <材料名称> <是否完成>  <所在假人>'}
