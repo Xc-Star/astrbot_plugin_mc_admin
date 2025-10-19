@@ -16,7 +16,7 @@ from jinja2 import Environment, FileSystemLoader
     "astrbot_plugin_mc_admin",
     "Xc_Star",
     "这是 MC服务器 的管理插件，支持list，珍珠炮落点计算，服务器工程坐标，备货清单，白名单管理等功能",
-    "0.3.6",
+    "0.4.0",
     "https://github.com/Xc-Star/astrbot_plugin_mc_admin"
 )
 class McAdminPlugin(Star):
