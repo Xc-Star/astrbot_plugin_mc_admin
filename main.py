@@ -64,8 +64,8 @@ class McAdminPlugin(Star):
     @filter.event_message_type(filter.EventMessageType.ALL)
     @in_enabled_groups()
     async def on_all_message(self, event: AstrMessageEvent):
-        if event.session_id not in list(self.task_temp.keys()):
-            yield
+        if event.message_obj.sender.user_id not in list(self.task_temp.keys()):
+            return
         yield event.plain_result(await self.command_utils.material(self.task_temp, event))
 
     @filter.command("task")

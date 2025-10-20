@@ -389,7 +389,7 @@ class CommandUtils:
         message = json_dict.get('message')
         if message:
             if message[0]['type'] == 'text':
-                return f"尊敬的用户：{event.message_obj.sender.nickname}您创建了{task_temp[event.message_obj.session_id]['name']}工程,但是还未上传材料列表文件"
+                return f"尊敬的用户：{event.message_obj.sender.nickname}您创建了{task_temp[event.message_obj.sender.user_id]['name']}工程,但是还未上传材料列表文件"
             elif message[0]['type'] == 'file':
                 client = event.bot  # 得到 client
                 payloads = {
@@ -397,7 +397,7 @@ class CommandUtils:
                     "file_id": json_dict['message'][0]['data']['file_id'],
                 }
                 ret = await client.api.call_action('get_group_file_url', **payloads)
-                return self.task_utils.task_material(ret['url'], json_dict['message'][0]['data']['file'], event.message_obj.session_id, task_temp)
+                return self.task_utils.task_material(ret['url'], json_dict['message'][0]['data']['file'], event.message_obj.sender.user_id, task_temp)
 
     def get_image(self):
         return self.image_utils.get_last_image()
