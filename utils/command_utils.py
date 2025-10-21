@@ -262,6 +262,7 @@ class CommandUtils:
         /task set <工程名字> <0-主世界 1-地狱 2-末地> <坐标> 修改服务器工程
         /task commit <工程id> <材料id> <已备数量> 提交材料的备货情况
         /task export <工程id> <0-txt 1-csv 2-excel> 导出工程相关信息 (正在开发中)
+        /task claim <工程名称> <材料编号> 认领材料
         函数返回结构：
         返回的为文本类型时：{"type":"text","msg":""}
         返回的为图片链接时：{"type":"image","msg":""}
@@ -353,7 +354,7 @@ class CommandUtils:
             return {"type": "text", "msg": self.task_utils.set_task(parts, event)}
             pass
 
-        # TODO task export
+        # TODO 导出工程信息
         elif msg.startswith('task export'):
             # 导出工程信息
             """
@@ -381,6 +382,14 @@ class CommandUtils:
             url = self.task_utils.render(task["msg"])
             return {"type":"image", "msg":url}
 
+        # TODO 认领材料
+        elif msg.startswith('task claim'):
+            pass
+
+        # TODO 取消认领材料
+        elif msg.startswith('task EscClaim'):
+            pass
+
     async def material(self, task_temp:TTLCache, event: AstrMessageEvent) -> str:
         raw_message = event.message_obj.raw_message
         match = re.search(r'<Event, (\{.*})>', str(raw_message), re.DOTALL)
@@ -396,8 +405,11 @@ class CommandUtils:
                     "group_id": json_dict['group_id'],
                     "file_id": json_dict['message'][0]['data']['file_id'],
                 }
+                filename = json_dict['message'][0]['data']['file']
+                if not filename.endswith('.txt') and not filename.endswith('.csv'):
+                    return "您上传了不支持的文件类型"
                 ret = await client.api.call_action('get_group_file_url', **payloads)
-                return self.task_utils.task_material(ret['url'], json_dict['message'][0]['data']['file'], event.message_obj.sender.user_id, task_temp)
+                return self.task_utils.task_material(ret['url'], filename, event.message_obj.sender.user_id, task_temp)
 
     def get_image(self):
         return self.image_utils.get_last_image()
