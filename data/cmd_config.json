@@ -47,6 +47,7 @@
     "web_search": false,
     "websearch_provider": "default",
     "websearch_tavily_key": [],
+    "websearch_baidu_app_builder_key": "",
     "web_search_link": false,
     "display_reasoning_text": false,
     "identifier": false,
@@ -62,7 +63,8 @@
     "streaming_response": false,
     "show_tool_use_status": false,
     "streaming_segmented": false,
-    "max_agent_step": 30
+    "max_agent_step": 30,
+    "tool_call_timeout": 60
   },
   "provider_stt_settings": {
     "enable": false,

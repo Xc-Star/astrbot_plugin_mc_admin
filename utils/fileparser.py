@@ -36,6 +36,8 @@ class FileParser:
                 data_str = file.read()
                 # 将文件夹内容以换行符切割为列表
                 lines = data_str.split('\n')
+                if len(lines) < head - (tail + 1):
+                    return {"code":500, "msg":"内容不符合要求，请检查后上传"}
                 result = []
                 id = 1
                 for line in lines[head:tail]:
@@ -47,7 +49,7 @@ class FileParser:
                     else:
                         name = parts[name_index].strip()
                     # 获取材料所需的组数和盒数
-                    gb_total = self.get_gb_total(parts[name_index].strip(),int(parts[name_index+1].strip()))
+                    gb_total = self.get_gb_total(name,int(parts[name_index+1].strip()))
                     item_info["id"] = id
                     item_info['name'] = name
                     item_info['total'] = int(parts[name_index+1].strip())
@@ -62,3 +64,8 @@ class FileParser:
             except Exception as e:
                 print(e)
                 return {"code":500,"msg":"文件解析失败"}
+
+if __name__ == "__main__":
+    filepath = "../data/ReadMe.txt"
+    f = FileParser(filepath).parse()
+    print(f)

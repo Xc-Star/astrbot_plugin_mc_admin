@@ -21,19 +21,12 @@ class McAdminPlugin(Star):
         super().__init__(context)
         self.config = config
         # 连接数据库
-        self.db_conn = sqlite3.connect(ConfigUtils(self.config).get_db_path())
+        self.db_conn = sqlite3.connect(ConfigUtils(self.config).get_db_path(), check_same_thread=False)
         self.command_utils = CommandUtils(config, self.db_conn)
         self.task_temp = TTLCache(maxsize=50, ttl=300)
 
     async def initialize(self):
         """可选择实现异步的插件初始化方法，当实例化该插件类之后会自动调用该方法。"""
-
-
-    @filter.command("test")
-    async def test(self, event: AstrMessageEvent):
-        logger.info(self.config)
-        msg = f"keys：{str(list(self.task_temp.keys()))},values：{str(list(self.task_temp.values()))}"
-        yield event.plain_result(msg)
         
     @filter.command("mc")
     @in_enabled_groups()
