@@ -288,7 +288,7 @@ class CommandUtils:
             for i in task_temp:
                 if task_temp[i]["name"] == parts[2]:
                     return {"type":"text", "msg": f"工程{parts[2]}已被{task_temp[i]['CreateUser']}创建但未上传材料列表文件"}
-            task_temp[event.session_id] = {
+            task_temp[event.message_obj.sender.user_id] = {
                 "name": parts[2],
                 "location": parts[3],
                 "dimension": coordinates,

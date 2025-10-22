@@ -5,6 +5,7 @@ from .config_utils import ConfigUtils
 from .image_utils import ImageUtils
 from .pojo.loc_result import LocResult
 from .decorators import in_enabled_groups, requires_enabled
+from .db_utils import DbUtils
 from .command_helpers import (
     PERMISSION_DENIED,
     LOC_ADD_RE,
@@ -37,4 +38,5 @@ __all__ = [
     "get_whitelist",
     "split_players_by_whitelist",
     "split_players_by_prefix",
+    "db_utils"
 ]

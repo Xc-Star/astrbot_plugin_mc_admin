@@ -4,8 +4,7 @@ from astrbot.api import logger
 from astrbot.core import AstrBotConfig
 from .utils import *
 from .utils.rcon_pool import close_rcon_pool
-from .utils import in_enabled_groups, requires_enabled
-import sqlite3
+from .utils import in_enabled_groups, requires_enabled, DbUtils
 from cachetools import TTLCache, cached
 
 @register(
@@ -21,8 +20,8 @@ class McAdminPlugin(Star):
         super().__init__(context)
         self.config = config
         # 连接数据库
-        self.db_conn = sqlite3.connect(ConfigUtils(self.config).get_db_path())
-        self.command_utils = CommandUtils(config, self.db_conn)
+        self.db_util = DbUtils()
+        self.command_utils = CommandUtils(config, self.db_util.get_conn())
         self.task_temp = TTLCache(maxsize=50, ttl=300)
 
     async def initialize(self):
@@ -83,4 +82,4 @@ class McAdminPlugin(Star):
         # 关闭Rcon连接池
         close_rcon_pool()
         # 关闭数据库连接
-        self.db_conn.close()
+        self.db_util.close()
