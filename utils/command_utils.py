@@ -23,7 +23,7 @@ from astrbot.api import logger
 from astrbot.core import AstrBotConfig
 from .loc_utils import LocUtils
 from .pojo.loc import Loc
-from .task_utils import TaslUtils
+from .task_utils import TaskUtils
 import re
 import asyncio
 from typing import Optional, List, Dict, Tuple
@@ -39,7 +39,7 @@ class CommandUtils:
         self.loc_utils = LocUtils(self.config_utils)
         self.servers = self.config_utils.get_server_list()
         self.rcon_pool = get_rcon_pool()
-        self.task_utils = TaslUtils(self.config_utils, conn)
+        self.task_utils = TaskUtils(self.config_utils, conn)
 
         # 常量/正则交由 helper 管理
 
@@ -60,14 +60,14 @@ class CommandUtils:
                 return self.PERMISSION_DENIED
             server = find_server_by_name(self.servers, arr[2])
             if server is None:
-                return "没有找到服务器"
+                return "找不到服务器喵~"
             match = MC_COMMAND_RE.match(msg)
             command = match.group(1) if match else ''
             return await send_command(self.rcon_pool, server, command)
 
         return self.message.get_help_message()
 
-    async def list_players(self):
+    async def list_players(self) -> str:
         """处理list命令的函数"""
 
         bot_prefix = self.config_utils.get_bot_prefix()
@@ -100,7 +100,7 @@ class CommandUtils:
         image_path = await self.image_utils.generate_list_image(servers_players)
         return image_path
 
-    def is_bot_player(self, player_name, bot_prefix):
+    def is_bot_player(self, player_name, bot_prefix) -> bool:
         """判断是否是bot"""
         if not player_name or len(player_name) < 3:  # 防止玩家ID过短
             return False
@@ -117,15 +117,15 @@ class CommandUtils:
         try:
             coord_parts = coordinates.split()
             if len(coord_parts) != 3:
-                return False, "坐标格式不正确，请提供x y z三个坐标值"
+                return False, "是<x y z>喵~"
 
             x, y, z = int(coord_parts[0]), int(coord_parts[1]), int(coord_parts[2])
             # 验证坐标范围（Minecraft世界坐标范围）
             if not (-30000000 <= x <= 30000000 and -30000000 <= z <= 30000000 and -64 <= y <= 368):
-                return False, "坐标超出有效范围"
+                return False, "坐标不可以太大喵~"
             return True, ""
         except ValueError:
-            return False, "坐标必须为整数"
+            return False, "坐标是整数喵~"
 
     async def wl(self, msg: str, event: AstrMessageEvent) -> str:
         """处理白名单命令的函数"""
@@ -140,11 +140,11 @@ class CommandUtils:
                 try:
                     wl_list = await get_whitelist(self.rcon_pool, server)
                     if not wl_list:
-                        return '暂无白名单'
+                        return '没有白名单喵~'
                     return '\n'.join(wl_list)
                 except Exception:
                     continue
-            return "服务器链接错误"
+            return "服务器连接失败喵~"
 
         # 分割命令
         arr = msg.split(' ')
@@ -162,7 +162,8 @@ class CommandUtils:
                     pass
             await asyncio.gather(*[do_op(s) for s in self.servers], return_exceptions=True)
             method = '添加到' if arr[1] == 'add' else '移除'
-            return f'已将{arr[2] + method}白名单'
+            return f'已将{arr[2] + method}白名单喵~'
+        return '未知错误喵~'
 
     async def loc(self, msg: str, event: AstrMessageEvent) -> str:
         """处理loc命令的函数
@@ -183,7 +184,7 @@ class CommandUtils:
         elif msg.startswith('loc add'):
             match = LOC_ADD_RE.match(msg)
             if not match:
-                return "请使用: /loc add <项目名字> <0-主世界 1-地狱 2-末地> <x y z>"
+                return "是/loc add <项目名字> <0-主世界 1-地狱 2-末地> <x y z>喵~"
 
             name, dimension, x, y, z = match.groups()
             coordinates = f"{x} {y} {z}"
@@ -201,7 +202,7 @@ class CommandUtils:
             # loc remove <项目名字>
             parts = msg.split(maxsplit=2)
             if len(parts) != 3:
-                return "请使用: /loc remove <项目名字>"
+                return "是/loc remove <项目名字>喵"
 
             name = parts[2]
             return self.loc_utils.remove_loc(name)
@@ -209,7 +210,7 @@ class CommandUtils:
         elif msg.startswith('loc set'):
             match = LOC_SET_RE.match(msg)
             if not match:
-                return "请使用: /loc set <项目名字> <0-主世界 1-地狱 2-末地> <x y z>"
+                return "是/loc set <项目名字> <0-主世界 1-地狱 2-末地> <x y z>喵~"
 
             name, dimension, x, y, z = match.groups()
             coordinates = f"{x} {y} {z}"
@@ -222,7 +223,7 @@ class CommandUtils:
             # 检查位置是否存在
             loc = self.loc_utils.get_loc_by_name(name)
             if loc is None:
-                return f'未找到"{name}"\n可以使用/loc list查看列表'
+                return f'没找到"{name}"喵~\n可以使用/loc list查看列表'
 
             # 更新位置信息
             loc.set_location(dimension=int(dimension), location=coordinates)
@@ -247,7 +248,7 @@ class CommandUtils:
                     result_parts.append(f"末地: {loc.end}")
                 return "\n".join(result_parts)
 
-            return f'未找到"{loc_name}"\n可以使用/loc list查看列表'
+            return f'没找到"{loc_name}"喵~\n可以使用/loc list查看列表'
 
         # 命令格式不正确，返回帮助信息
         return self.message.get_loc_help_message()
@@ -275,27 +276,36 @@ class CommandUtils:
             符合命令结构 -> 记录相关信息(创建人、工程名称、工程纬度、工程坐标)[如果存在则替换信息] -> 持续检测创建人的消息 -> 判断消息类型是否为文件(是)|pass(非) [此流程在main文件] 
             -> 判断后缀是否为合法后缀(是)|发送提示(非) -> 解析文件(是)|返回提示(非) -> 上传数据库(解析成功)|发送提示(解析失败)
             """
+
+            # 校验命令格式
             parts = msg.split(maxsplit=6)
             if len(parts) != 7:
-                return {"type": "text",
-                        "msg": "请使用: /task add <工程名字> <0-主世界 1-地狱 2-末地> <坐标>"}
+                return {"type": "text", "msg": "是/task add <工程名字> <0-主世界 1-地狱 2-末地> <x y z>喵~"}
+
+            # 校验坐标
             coordinates = f"{parts[4]} {parts[5]} {parts[6]}"
             is_valid, error_msg = self.validate_coordinates(coordinates)
             if not is_valid:
                 return {"type": "text", "msg": error_msg}
+
+            # 校验是否重名
             task = self.task_utils.get_task_by_name(parts[2])
             if task["code"] == 200:
-                return {"type":"text", "msg": f"工程{parts[2]}存在"}
+                return {"type":"text", "msg": f"已经有{parts[2]}了喵~"}
+
+            # 校验是否已经创建，TODO: 改为存数据库缓存。添加发送者id
             for i in task_temp:
                 if task_temp[i]["name"] == parts[2]:
-                    return {"type":"text", "msg": f"工程{parts[2]}已被{task_temp[i]['CreateUser']}创建但未上传材料列表文件"}
+                    return {"type":"text", "msg": f"{task_temp[i]['CreateUser']}已经申请创建{parts[2]}了喵~"}
+
+            # 创建临时信息，TODO: 改为存数据库缓存
             task_temp[event.message_obj.sender.user_id] = {
                 "name": parts[2],
                 "location": parts[3],
                 "dimension": coordinates,
                 "CreateUser": event.message_obj.sender.nickname
             }
-            return {"type":"text", "msg": "新增成功，请在10分钟内发送材料列表文件，支持txt和csv"}
+            return {"type":"text", "msg": "好的喵~快发我litematic、txt、csv吧"}
 
         elif msg.startswith('task remove'):
             # 删除工程
@@ -309,10 +319,11 @@ class CommandUtils:
             # 不符合命令结构 -> 返回task remove命令的结构
             parts = msg.split(maxsplit=2)
             if len(parts) != 3:
-                return {"type":"text","msg":"请使用: /task remove <项目名字>"}
+                return {"type":"text","msg":"是/task remove <项目名字>喵~"}
 
+            # 数据库移除
             name = parts[2]
-            return {"type":"text","msg":self.task_utils.remove_task(name)}
+            return {"type":"text","msg":self.task_utils.remove_task(name, event)}
 
         elif msg.startswith('task list'):
             # 工程列表
@@ -320,7 +331,7 @@ class CommandUtils:
             return {"type":"text","msg":self.task_utils.get_task_list()}
 
         elif msg.startswith('task commit'):
-            # 提交材料
+            # 提交材料，TODO: 提交进度，接取任务
             """
             命令结构：task commit <工程id> <材料id> <已备数量> 提交材料的备货情况
             处理逻辑:
@@ -329,7 +340,7 @@ class CommandUtils:
             """
             parts = msg.split(maxsplit=5)
             if len(parts) != 6:
-                return {"type": "text", "msg": "请使用: /task commit <工程名称> <材料序号> <已备数量(单位个)> <材料所在假人> 提交材料的备货情况"}
+                return {"type": "text", "msg": "是/task commit <工程名称> <材料序号> <进度> <材料所在假人>喵~"}
 
             return {"type":"text","msg":self.task_utils.commit_task(parts, event)}
 
@@ -342,26 +353,19 @@ class CommandUtils:
             符合命令结构 -> 调用数据库 -> 判断工程是否存在 -> 修改数据(存在)｜返回提示(不存在) -> 提交数据修改
             PS:暂时不支持修改材料列表，在后续版本进行新增
             """
+
+            # 校验命令
             parts = msg.split(maxsplit=7)
             if len(parts) != 8:
-                return {"type": "text",
-                        "msg": "请使用: /task set <工程名字> <新工程名称> <0-主世界 1-地狱 2-末地> <坐标>"}
+                return {"type": "text",  "msg": "请使用: /task set <工程名字> <新工程名称> <0-主世界 1-地狱 2-末地> <x y z>"}
+
+            # 校验坐标
             coordinates = f"{parts[5]} {parts[6]} {parts[7]}"
             is_valid, error_msg = self.validate_coordinates(coordinates)
             if not is_valid:
                 return {"type": "text", "msg": error_msg}
 
             return {"type": "text", "msg": self.task_utils.set_task(parts, event)}
-            pass
-
-        # TODO 导出工程信息
-        elif msg.startswith('task export'):
-            # 导出工程信息
-            """
-            处理逻辑：
-            不符合命令结构 -> 返回命令结构
-            符合命令结构 -> 判断工程是否存在 -> 判断导出类型(存在)｜返回提示(不存在) -> 导出文件(存在) -> 发送文件(存在)"""
-            pass
 
         elif msg.startswith('task'):
             """
@@ -370,15 +374,16 @@ class CommandUtils:
             task带名称 -> 返回工程详情(图片)
             """
             parts = msg.split(maxsplit=1)
+
             # task不带参数 - > 返回task命令的help
             if len(parts) != 2:
-                print(111)
                 return {"type":"text","msg":self.message.get_task_help_message()}
+
             # task带名称 -> 返回工程详情(图片)
             task_name = parts[1]
             task = self.task_utils.get_task_by_name(task_name)
             if task["code"] != 200:
-                return {"type":"text","msg":f"工程：{task_name}不存在"}
+                return {"type":"text","msg":f"没找到{task_name}喵~"}
             url = self.task_utils.render(task["msg"])
             return {"type":"image", "msg":url}
 
@@ -390,15 +395,22 @@ class CommandUtils:
         elif msg.startswith('task EscClaim'):
             pass
 
-    async def material(self, task_temp:TTLCache, event: AstrMessageEvent) -> str:
+        return {"type": "text", "msg": self.message.get_task_help_message()}
+
+    async def material(self, task_temp:TTLCache, event: AstrMessageEvent) -> str | None:
+
+        # TODO: 数据缓存改数据库
+        # 获取原信息
         raw_message = event.message_obj.raw_message
         match = re.search(r'<Event, (\{.*})>', str(raw_message), re.DOTALL)
         event_dict_str = match.group(1).replace("'", '\"')
         json_dict = json.loads(event_dict_str)
+
+        # 消息类型
         message = json_dict.get('message')
         if message:
             if message[0]['type'] == 'text':
-                return f"尊敬的用户：{event.message_obj.sender.nickname}您创建了{task_temp[event.message_obj.sender.user_id]['name']}工程,但是还未上传材料列表文件"
+                return None
             elif message[0]['type'] == 'file':
                 client = event.bot  # 得到 client
                 payloads = {
@@ -406,10 +418,14 @@ class CommandUtils:
                     "file_id": json_dict['message'][0]['data']['file_id'],
                 }
                 filename = json_dict['message'][0]['data']['file']
+
+                # TODO: 解析投影源文件
                 if not filename.endswith('.txt') and not filename.endswith('.csv'):
-                    return "您上传了不支持的文件类型"
+                    return None
+
                 ret = await client.api.call_action('get_group_file_url', **payloads)
                 return self.task_utils.task_material(ret['url'], filename, event.message_obj.sender.user_id, task_temp)
+        return None
 
-    def get_image(self):
+    def get_image(self) -> str:
         return self.image_utils.get_last_image()

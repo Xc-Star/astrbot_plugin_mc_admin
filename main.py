@@ -65,7 +65,10 @@ class McAdminPlugin(Star):
     async def on_all_message(self, event: AstrMessageEvent):
         if event.message_obj.sender.user_id not in list(self.task_temp.keys()):
             return
-        yield event.plain_result(await self.command_utils.material(self.task_temp, event))
+        # TODO: 数据缓存改数据库
+        res = await self.command_utils.material(self.task_temp, event)
+        if res is not None:
+            yield event.plain_result(res)
 
     @filter.command("task")
     @in_enabled_groups()

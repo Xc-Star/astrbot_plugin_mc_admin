@@ -11,29 +11,35 @@ import sqlite3
 from .image_utils import ImageUtils
 from .fileparser import FileParser
 
-class TaslUtils:
+class TaskUtils:
     def __init__(self, config_utils: ConfigUtils, conn: sqlite3.Connection):
         self.image_utils = ImageUtils(config_utils)
         self.config_utils = config_utils
         self.conn = conn
+        self.file_parser = FileParser()
 
-    def remove_task(self, name):
+    def remove_task(self, name, event: AstrMessageEvent):
+
         task = self.get_task_by_name(name)
         if task["code"] != 200:
-            return f"工程{name}不存在"
+            return f"没找到{name}喵~"
+
+        if task["msg"][0][4] != event.get_sender_name() and not event.is_admin():
+            return f"{name}才不是你的喵~"
+
         sql = "DELETE FROM task WHERE name = ?"
         self.conn.execute(sql, (name,))
         self.conn.commit()
-        return "删除成功"
+        return f"把{name}删掉了喵~"
 
     def commit_task(self, parts, event: AstrMessageEvent):
         # name 2, materia 3,PersonInCharge 4, location 5
         task = self.get_task_by_name(parts[2])
         if task["code"] != 200:
-            return f"工程{parts[2]}不存在"
+            return f"没找到{parts[2]}喵~"
         materia_list = json.loads(task['msg'][0][5])
         if len(materia_list) < int(parts[3]):
-            return f"工程{parts[2]}中无序号为{parts[3]}材料"
+            return f"没找到{parts[2]}的{parts[3]}号材料喵~"
         try:
             materia = materia_list[int(parts[3]) - 1]
             materia["progress"] = int(parts[4])
@@ -43,9 +49,9 @@ class TaslUtils:
             sql = "UPDATE task SET MaterialList = ? WHERE name = ?"
             self.conn.execute(sql, (json.dumps(materia_list,ensure_ascii=False), parts[2],))
             self.conn.commit()
-            return "提交材料成功"
+            return "收到啦！谢谢喵~"
         except Exception as e:
-            return f"出现错误,请联系管理员进行处理"
+            return f"呜哇！报错了喵！"
 
 
     def get_task_list(self):
@@ -65,9 +71,10 @@ class TaslUtils:
         if sql_res:
             return {"code": 200, "msg": sql_res}
         else:
-            return {"code": 500, "msg": "工程不存在"}
+            return {"code": 500, "msg": f"没找到{name}喵~"}
 
     def render(self, task):
+        # TODO: 命名
         _task = {
             "name": task[0][1],
             "location": task[0][2],
@@ -94,12 +101,18 @@ class TaslUtils:
     def set_task(self, parts, event):
         task = self.get_task_by_name(parts[2])
         if task["code"] != 200:
-            return f"工程{parts[2]}不存在"
-        if task["msg"][0][4] != event.message_obj.sender.nickname:
-            return f"工程{parts[2]}不是你创建的，请联系{task[0][4]}进行修改"
+            return f"没有{parts[2]}喵~"
+
+        # 非创建者并且非管理员不可修改
+        if task["msg"][0][4] != event.message_obj.sender.nickname and not event.is_admin():
+            return f"{parts[2]}才不是你的喵~"
+
+        # 校验新名字是否存在
         new_task = self.get_task_by_name(parts[3])
         if new_task["code"] == 200:
-            return f"工程{parts[3]}存在，请重命名为其他名称"
+            return f"已经有{parts[3]}了喵~"
+
+        # TODO: 命名
         sql = "UPDATE task SET name = ?,location = ?,dimension = ? WHERE name = ?"
         # 5x 6y 7z
         dimension = f"{parts[5]} {parts[6]} {parts[7]}"
@@ -124,16 +137,20 @@ class TaslUtils:
 
     def task_material(self,url, file_name,session_id, task_temp):
         # url:文件链接 file_name:文件名称 session_id:会话ID task_temp:缓存的信息
+
+        # 获取会话id
         task_temp_info = task_temp[session_id]
 
+        # 获取文件路径
         file_path = os.path.join(self.config_utils.get_plugin_path(), "data", file_name)
         if not self.download_file(url, file_path):
-            return "文件下载失败"
-        fp = FileParser(file_path).parse()
+            return "文件下载失败喵~"
+        fp = self.file_parser.parse(file_path)
         os.remove(file_path)
         if fp["code"] != 200:
             return fp["msg"]
         try:
+            # TODO: 命名
             task = {
                 "name": task_temp_info["name"],
                 "location": task_temp_info["location"],
@@ -146,7 +163,7 @@ class TaslUtils:
             self.conn.execute(sql, (task["name"], task["location"], task["dimension"], task["CreateUser"], MaterialList))
             self.conn.commit()
             task_temp.pop(session_id)
-            return "上传材料列表成功"
+            return "上传材料列表成功喵~"
         except Exception as e:
             logger.error(e)
-            return "出现错误，请联系管理员处理"
+            return f"报错了喵~ \n {e}"

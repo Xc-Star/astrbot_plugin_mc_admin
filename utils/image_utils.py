@@ -41,7 +41,7 @@ class ImageUtils:
         except Exception as e:
             logger.error(f"渲染模板失败: {str(e)}")
             # 发生错误时返回一个简单的错误页面
-            return f"<html><body><h1>模板渲染错误</h1><p>{str(e)}</p></body></html>"
+            return f"<html><body><h1>模板渲染错误喵~</h1><p>{str(e)}</p></body></html>"
             
     def _get_template_content(self):
         """获取模板内容，带缓存机制"""
