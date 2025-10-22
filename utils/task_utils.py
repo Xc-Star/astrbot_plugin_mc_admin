@@ -1,5 +1,5 @@
 import json
-import logging
+from astrbot.api import logger
 import os
 
 import httpx
@@ -128,11 +128,11 @@ class TaslUtils:
 
         file_path = os.path.join(self.config_utils.get_plugin_path(), "data", file_name)
         if not self.download_file(url, file_path):
-            return "文件下载失败，请联系管理员处理"
+            return "文件下载失败"
         fp = FileParser(file_path).parse()
         os.remove(file_path)
         if fp["code"] != 200:
-            return "文件解析失败，请联系管理员处理"
+            return fp["msg"]
         try:
             task = {
                 "name": task_temp_info["name"],
@@ -148,5 +148,5 @@ class TaslUtils:
             task_temp.pop(session_id)
             return "上传材料列表成功"
         except Exception as e:
-            logging.error(e)
+            logger.error(e)
             return "出现错误，请联系管理员处理"
