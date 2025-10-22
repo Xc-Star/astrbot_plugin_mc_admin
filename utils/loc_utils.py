@@ -10,7 +10,7 @@ class LocUtils:
         loc_list = self.config_utils.get_loc_list()
         for existing_loc in loc_list:
             if existing_loc['name'] == loc.name:
-                return f'"{loc.name}"已存在'
+                return f'"已经有{loc.name}"了喵'
         
         loc_list.append({
             'name': loc.name,
@@ -19,7 +19,7 @@ class LocUtils:
             'end': loc.end
         })
         self.config_utils.set_loc_list(loc_list)
-        return f'已添加"{loc.name}"'
+        return f'已添加"{loc.name}"喵~'
 
     def remove_loc(self, name: str) -> str:
         loc_list = self.config_utils.get_loc_list()
@@ -27,8 +27,8 @@ class LocUtils:
             if loc['name'] == name:
                 loc_list.pop(i)
                 self.config_utils.set_loc_list(loc_list)
-                return f'已将"{name}"移除'
-        return f'未找到"{name}"'
+                return f'已将"{name}"移除喵！'
+        return f'没找到"{name}"喵~'
     
     def get_loc_by_name(self, name: str) -> Loc | None:
         loc_list = self.config_utils.get_loc_list()
@@ -59,8 +59,8 @@ class LocUtils:
                     'end': loc.end
                 }
                 self.config_utils.set_loc_list(loc_list)
-                return f'已更新"{loc.name}"'
+                return f'已更新"{loc.name}"喵~'
         
         # 未找到对应位置
-        return f'未找到"{loc.name}"'
+        return f'没找到"{loc.name}"喵~'
         

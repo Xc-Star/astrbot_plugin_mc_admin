@@ -1,3 +1,4 @@
 mcrcon==0.7.0
 html2image
 cachetools==6.2.0
+Schematic
