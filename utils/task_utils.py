@@ -1,4 +1,7 @@
 import json
+
+from cachetools import TTLCache
+
 from astrbot.api import logger
 import os
 
@@ -77,10 +80,10 @@ class TaskUtils:
         # TODO: 命名
         _task = {
             "name": task[0][1],
-            "location": task[0][2],
-            "dimension": task[0][3],
-            "CreateUser": task[0][4],
-            "MaterialList": json.loads(task[0][5]),
+            "dimension": task[0][2],
+            "location": task[0][3],
+            "create_user": task[0][4],
+            "MaterialList": [],
         }
         templates = os.path.join(self.config_utils.get_plugin_path(), "template")
         output = os.path.join(self.config_utils.get_plugin_path(), "data")
@@ -135,7 +138,7 @@ class TaskUtils:
         except:
             return False
 
-    def task_material(self,url, file_name,session_id, task_temp):
+    def task_material(self, url, file_name, session_id: str, task_temp: TTLCache):
         # url:文件链接 file_name:文件名称 session_id:会话ID task_temp:缓存的信息
 
         # 获取会话id
@@ -150,20 +153,26 @@ class TaskUtils:
         if fp["code"] != 200:
             return fp["msg"]
         try:
-            # TODO: 命名
+            # 插入task数据库
             task = {
                 "name": task_temp_info["name"],
                 "location": task_temp_info["location"],
                 "dimension": task_temp_info["dimension"],
-                "CreateUser": task_temp_info["CreateUser"],
-                "MaterialList": fp["msg"],
+                "create_user": task_temp_info["sender_name"],
+                "create_user_id": task_temp_info["sender_id"],
             }
-            sql = "insert into task(name,location,dimension,CreateUser,MaterialList) values (?, ?, ?, ?, ?);"
-            MaterialList = json.dumps(task["MaterialList"], ensure_ascii=False)
-            self.conn.execute(sql, (task["name"], task["location"], task["dimension"], task["CreateUser"], MaterialList))
+            sql = "insert into task(name,location,dimension,create_user,create_user_id) values (?, ?, ?, ?, ?);"
+            cursor = self.conn.execute(sql, (task["name"], task["location"], task["dimension"], task["create_user"], task["create_user_id"]))
+
+            task_id = cursor.lastrowid
+            logger.error(f'task_id: {int(task_id)}')
+
+            # TODO: 插入材料列表数据库
+            # MaterialList = json.dumps(task["MaterialList"], ensure_ascii=False)
             self.conn.commit()
             task_temp.pop(session_id)
             return "上传材料列表成功喵~"
         except Exception as e:
+            self.conn.rollback()
             logger.error(e)
             return f"报错了喵~ \n {e}"
