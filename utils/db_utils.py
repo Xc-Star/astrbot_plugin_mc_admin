@@ -15,10 +15,10 @@ class DbUtils:
             CREATE TABLE IF NOT EXISTS "task" (
                 "id" INTEGER NOT NULL,
                 "name" TEXT NOT NULL,
-                "location" integer NOT NULL,
+                "location" TEXT NOT NULL,
                 "dimension" TEXT NOT NULL,
-                "CreateUser" TEXT NOT NULL,
-                "MaterialList" TEXT,
+                "create_user" TEXT NOT NULL,
+                "create_user_id" TEXT NOT NULL,
                 PRIMARY KEY ("id")
             );
             '''

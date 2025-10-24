@@ -200,7 +200,7 @@ class CommandUtils:
 
         elif msg.startswith('loc remove'):
             # loc remove <项目名字>
-            parts = msg.split(maxsplit=2)
+            parts = msg.split(' ')
             if len(parts) != 3:
                 return "是/loc remove <项目名字>喵"
 
@@ -231,7 +231,7 @@ class CommandUtils:
 
         elif msg.startswith('loc '):
             # 查看指定位置详情
-            parts = msg.split(maxsplit=1)
+            parts = msg.split(' ')
             if len(parts) != 2:
                 return self.message.get_loc_help_message()
 
@@ -278,34 +278,41 @@ class CommandUtils:
             """
 
             # 校验命令格式
-            parts = msg.split(maxsplit=6)
+            parts = msg.split(' ')
             if len(parts) != 7:
                 return {"type": "text", "msg": "是/task add <工程名字> <0-主世界 1-地狱 2-末地> <x y z>喵~"}
 
+            # 解析参数
+            name = parts[2] # 项目名字
+            dimension = parts[3] # 维度
+            location = f"{parts[4]} {parts[5]} {parts[6]}" # 坐标
+
             # 校验坐标
-            coordinates = f"{parts[4]} {parts[5]} {parts[6]}"
-            is_valid, error_msg = self.validate_coordinates(coordinates)
+            is_valid, error_msg = self.validate_coordinates(location)
             if not is_valid:
                 return {"type": "text", "msg": error_msg}
 
             # 校验是否重名
-            task = self.task_utils.get_task_by_name(parts[2])
+            task = self.task_utils.get_task_by_name(name)
             if task["code"] == 200:
-                return {"type":"text", "msg": f"已经有{parts[2]}了喵~"}
+                return {"type":"text", "msg": f"已经有{name}了喵~"}
 
-            # 校验是否已经创建，TODO: 改为存数据库缓存。添加发送者id
+            # 校验是否已经创建
             for i in task_temp:
-                if task_temp[i]["name"] == parts[2]:
-                    return {"type":"text", "msg": f"{task_temp[i]['CreateUser']}已经申请创建{parts[2]}了喵~"}
+                if task_temp[i]["name"] == name:
+                    if not event.is_admin():
+                        return {"type":"text", "msg": f"{task_temp[i]['sender_name']}({task_temp[i]['sender_id']})已经申请创建{name}了喵~"}
 
-            # 创建临时信息，TODO: 改为存数据库缓存
-            task_temp[event.message_obj.sender.user_id] = {
-                "name": parts[2],
-                "location": parts[3],
-                "dimension": coordinates,
-                "CreateUser": event.message_obj.sender.nickname
-            }
-            return {"type":"text", "msg": "好的喵~快发我litematic、txt、csv吧"}
+                    # 管理员强制创建
+                    task_temp.pop(i)
+                    # 创建临时信息
+                    session_id = f'{event.get_group_id()}_{event.get_sender_id()}'
+                    return self.create_cache(task_temp, session_id, name, event.get_sender_name(),
+                                             event.get_sender_id(), dimension, location)
+
+            # 创建临时信息
+            session_id = f'{event.get_group_id()}_{event.get_sender_id()}'
+            return self.create_cache(task_temp, session_id, name, event.get_sender_name(), event.get_sender_id(), dimension, location)
 
         elif msg.startswith('task remove'):
             # 删除工程
@@ -317,7 +324,7 @@ class CommandUtils:
             """
             # 符合命令结构 -> 调用数据库 -> 删除相关数据 -> 提交数据库修改
             # 不符合命令结构 -> 返回task remove命令的结构
-            parts = msg.split(maxsplit=2)
+            parts = msg.split(' ')
             if len(parts) != 3:
                 return {"type":"text","msg":"是/task remove <项目名字>喵~"}
 
@@ -338,7 +345,7 @@ class CommandUtils:
             不符合命令结构 -> 返回命令结构
             符合命令结构 -> 调用数据库 -> 判断工程是否存在 -> 修改数据(存在)｜返回提示(不存在) -> 提交数据修改(存在)
             """
-            parts = msg.split(maxsplit=5)
+            parts = msg.split(' ')
             if len(parts) != 6:
                 return {"type": "text", "msg": "是/task commit <工程名称> <材料序号> <进度> <材料所在假人>喵~"}
 
@@ -355,13 +362,13 @@ class CommandUtils:
             """
 
             # 校验命令
-            parts = msg.split(maxsplit=7)
+            parts = msg.split(' ')
             if len(parts) != 8:
                 return {"type": "text",  "msg": "请使用: /task set <工程名字> <新工程名称> <0-主世界 1-地狱 2-末地> <x y z>"}
 
             # 校验坐标
-            coordinates = f"{parts[5]} {parts[6]} {parts[7]}"
-            is_valid, error_msg = self.validate_coordinates(coordinates)
+            location = f"{parts[5]} {parts[6]} {parts[7]}"
+            is_valid, error_msg = self.validate_coordinates(location)
             if not is_valid:
                 return {"type": "text", "msg": error_msg}
 
@@ -373,7 +380,7 @@ class CommandUtils:
             task不带参数 - > 返回task命令的help
             task带名称 -> 返回工程详情(图片)
             """
-            parts = msg.split(maxsplit=1)
+            parts = msg.split(' ')
 
             # task不带参数 - > 返回task命令的help
             if len(parts) != 2:
@@ -397,14 +404,41 @@ class CommandUtils:
 
         return {"type": "text", "msg": self.message.get_task_help_message()}
 
-    async def material(self, task_temp:TTLCache, event: AstrMessageEvent) -> str | None:
+    def create_cache(self,
+                     task_temp: TTLCache,
+                     session_id: str,
+                     name: str,
+                     sender_name: str,
+                     sender_id: str,
+                     dimension: str,
+                     location: str) -> dict:
+        task_temp[f'{session_id}'] = {
+            "name": name,
+            "sender_name": sender_name,
+            "sender_id": sender_id,
+            "dimension": dimension,
+            "location": location,
+        }
+        return {"type": "text", "msg": "好的喵~快发我litematic、txt、csv吧"}
 
-        # TODO: 数据缓存改数据库
-        # 获取原信息
-        raw_message = event.message_obj.raw_message
-        match = re.search(r'<Event, (\{.*})>', str(raw_message), re.DOTALL)
-        event_dict_str = match.group(1).replace("'", '\"')
-        json_dict = json.loads(event_dict_str)
+    async def material(self, task_temp: TTLCache, event: AstrMessageEvent) -> str | None:
+
+        try:
+            # 获取原信息
+            raw_message = event.message_obj.raw_message
+            match = re.search(r'<Event, (\{.*})>', str(raw_message), re.DOTALL)
+            event_dict_str = match.group(1).replace("'", '\"')
+            json_dict = json.loads(event_dict_str)
+        except:
+            # 防止傻逼QQ返回的字符串被注入
+            """
+            {"self_id": 1749245527, "user_id": 254182219, "time": 1761192511, "message_id": 1100623448, "message_seq":2
+            1100623448, "real_id": 1100623448, "real_seq": "30388", "message_type": "group", "sender": {"user_id": 254182219,
+            <"nickname": "不会玩Mc的Xc_Star", "card": "", "role": "admin"}, "raw_message": "/task add ;"drop table task# 0 θ θ 
+            0", "font": 14, "sub_type": "normal", "message": [{"type": "text", "data": {"text": "/task add ;"drop table task#
+            0 θ θ 0"}}], "message_format": "array", "post_type": "message", "group_id": 534107220, "group_name": "插件测试"}
+            """
+            return None
 
         # 消息类型
         message = json_dict.get('message')
@@ -419,12 +453,12 @@ class CommandUtils:
                 }
                 filename = json_dict['message'][0]['data']['file']
 
-                # TODO: 解析投影源文件
                 if not filename.endswith('.txt') and not filename.endswith('.csv'):
                     return None
 
+                # TODO: 解析投影源文件
                 ret = await client.api.call_action('get_group_file_url', **payloads)
-                return self.task_utils.task_material(ret['url'], filename, event.message_obj.sender.user_id, task_temp)
+                return self.task_utils.task_material(ret['url'], filename, f'{event.get_group_id()}_{event.get_sender_id()}', task_temp)
         return None
 
     def get_image(self) -> str:

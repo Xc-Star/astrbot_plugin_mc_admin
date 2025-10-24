@@ -166,14 +166,14 @@
                 <div class="info-row">
                     <div>
                         <span class="info-label">上传者：</span>
-                        <span class="info-value">{{ data.CreateUser }}</span>
+                        <span class="info-value">{{ data.create_user }}</span>
                     </div>
                     <div>
                         <span class="info-label">所在纬度：</span>
                         <span class="info-value">
-                            {% if data.location == 0 %}
+                            {% if data.location == '0' %}
                                 主世界
-                            {% elif data.location == 1 %}
+                            {% elif data.location == '1' %}
                                 地狱
                             {% else %}
                                 末地
@@ -187,38 +187,38 @@
                 </div>
             </div>
 
-            <table class="materials-table">
-                <thead>
-                    <tr>
-                        <th>序号</th>
-                        <th>材料</th>
-                        <th>所需数量</th>
-                        <th>所需/组</th>
-                        <th>所需/组</th>
-                        <th>已备数量</th>
-                        <th>备货人</th>
-                        <th>所在位置/假人</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for Materia in data.MaterialList %}
-                        <tr>
-                            <td>{{ Materia.id }}</td>
-<!--                            <td><i class="icon-placeholder"></i>{{ Materia.name }}</td>-->
-                            <td>{{ Materia.name }}</td>
-                            <td>{{ Materia.total }}</td>
-                            <td>{{ Materia.GroupTotal }}</td>
-                            <td>{{ Materia.BoxTotal }}</td>
-                            <td>
-                                <span class="{% if Materia.progress >= Materia.total %}status-completed{% else %}status-not-started{% endif %}">{{ Materia.progress }}</span>
-                            </td>
-<!--                            <td><span class="{% if Materia.progress == '是'%}status-completed{% else %}status-not-started{% endif %}">{{ Materia.progress }}</span></td>-->
-                            <td>{% if Materia.PersonInCharge == "" %}-{% else %}{{ Materia.PersonInCharge }}{% endif %}</td>
-                            <td>{% if Materia.location == "" %}-{% else %}{{ Materia.location }}{% endif %}</td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+<!--            <table class="materials-table">-->
+<!--                <thead>-->
+<!--                    <tr>-->
+<!--                        <th>序号</th>-->
+<!--                        <th>材料</th>-->
+<!--                        <th>所需数量</th>-->
+<!--                        <th>所需/组</th>-->
+<!--                        <th>所需/组</th>-->
+<!--                        <th>已备数量</th>-->
+<!--                        <th>备货人</th>-->
+<!--                        <th>所在位置/假人</th>-->
+<!--                    </tr>-->
+<!--                </thead>-->
+<!--                <tbody>-->
+<!--                    {% for Materia in data.MaterialList %}-->
+<!--                        <tr>-->
+<!--                            <td>{{ Materia.id }}</td>-->
+<!--&lt;!&ndash;                            <td><i class="icon-placeholder"></i>{{ Materia.name }}</td>&ndash;&gt;-->
+<!--                            <td>{{ Materia.name }}</td>-->
+<!--                            <td>{{ Materia.total }}</td>-->
+<!--                            <td>{{ Materia.GroupTotal }}</td>-->
+<!--                            <td>{{ Materia.BoxTotal }}</td>-->
+<!--                            <td>-->
+<!--                                <span class="{% if Materia.progress >= Materia.total %}status-completed{% else %}status-not-started{% endif %}">{{ Materia.progress }}</span>-->
+<!--                            </td>-->
+<!--&lt;!&ndash;                            <td><span class="{% if Materia.progress == '是'%}status-completed{% else %}status-not-started{% endif %}">{{ Materia.progress }}</span></td>&ndash;&gt;-->
+<!--                            <td>{% if Materia.PersonInCharge == "" %}-{% else %}{{ Materia.PersonInCharge }}{% endif %}</td>-->
+<!--                            <td>{% if Materia.location == "" %}-{% else %}{{ Materia.location }}{% endif %}</td>-->
+<!--                        </tr>-->
+<!--                    {% endfor %}-->
+<!--                </tbody>-->
+<!--            </table>-->
         </div>
     </div>
 </body>
