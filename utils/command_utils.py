@@ -366,13 +366,16 @@ class CommandUtils:
             if len(parts) != 8:
                 return {"type": "text",  "msg": "请使用: /task set <工程名字> <新工程名称> <0-主世界 1-地狱 2-末地> <x y z>"}
 
-            # 校验坐标
             location = f"{parts[5]} {parts[6]} {parts[7]}"
+            dimension = parts[4]
+            original_name = parts[2]
+            name = parts[3]
+            # 校验坐标
             is_valid, error_msg = self.validate_coordinates(location)
             if not is_valid:
                 return {"type": "text", "msg": error_msg}
 
-            return {"type": "text", "msg": self.task_utils.set_task(parts, event)}
+            return {"type": "text", "msg": self.task_utils.set_task(location, dimension, original_name, name, event)}
 
         elif msg.startswith('task'):
             """

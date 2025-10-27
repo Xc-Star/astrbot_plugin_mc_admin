@@ -15,7 +15,7 @@ class FileParser:
         box_total = round(total/stackable/27,2)
         return group_total,box_total
 
-    def parse(self, file_path) -> dict:
+    def parse(self, file_path: str, task_id: int) -> dict:
         # 材料列表为txt文本的情况
         if file_path.endswith(".txt"):
             # interval（分割符）, head（从头部多少行开始读取）, tail（读区到尾部第多少行）, name_index（名称的索引）, d（是否去除引号）
@@ -23,6 +23,9 @@ class FileParser:
         # 材料列表为csv的情况
         elif file_path.endswith(".csv"):
             interval, head, tail, name_index, d = ",", 2, -1, 0,  1
+        elif file_path.endswith(".litematic"):
+            # TODO: 解析litematic源文件
+            pass
         else:
             return {"code":500,"msg":"解析不了喵~"}
         # 读取材料列表文件进行处理
@@ -35,33 +38,19 @@ class FileParser:
                 if len(lines) < head - (tail + 1):
                     return {"code":500, "msg":"解析不了喵~"}
                 result = []
-                id = 1
                 for line in lines[head:tail]:
-                    item_info = {}
                     parts = line.split(interval)
                     if d:
                         # 如果去除引号为1取字符串的第二个字符到倒数第二个
                         name = parts[name_index].strip()[1:-1]
                     else:
                         name = parts[name_index].strip()
-                    # 获取材料所需的组数和盒数
-                    gb_total = self.get_gb_total(name,int(parts[name_index+1].strip()))
-                    item_info["id"] = id
-                    item_info['name'] = name
-                    item_info['total'] = int(parts[name_index+1].strip())
-                    item_info['GroupTotal'] = gb_total[0]
-                    item_info['BoxTotal'] = gb_total[1]
-                    item_info['PersonInCharge'] = "-"
-                    item_info['progress'] = 0
-                    item_info['location'] = "-"
-                    result.append(item_info)
-                    id += 1
+                    total = int(parts[name_index+1].strip())
+                    commit_count = 0
+                    number = len(result) + 1
+                    # 创建元组  TODO: name_id
+                    result.append((name, '', total, '', commit_count, number, task_id))
                 return {"code":200,"msg":result}
             except Exception as e:
                 print(e)
                 return {"code":500,"msg":"解析不了喵~"}
-
-if __name__ == "__main__":
-    filepath = "../data/ReadMe.txt"
-    f = FileParser().parse(filepath)
-    print(f)
