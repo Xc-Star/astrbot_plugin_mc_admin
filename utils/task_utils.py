@@ -27,13 +27,21 @@ class TaskUtils:
         if task["code"] != 200:
             return f"没找到{name}喵~"
 
-        if task["msg"][0][4] != event.get_sender_name() and not event.is_admin():
+        if task["msg"][0][5] != event.get_sender_id() and not event.is_admin():
             return f"{name}才不是你的喵~"
 
-        sql = "DELETE FROM task WHERE name = ?"
-        self.conn.execute(sql, (name,))
-        self.conn.commit()
-        return f"把{name}删掉了喵~"
+        try:
+            # 删除任务
+            sql = "DELETE FROM task WHERE name = ?"
+            self.conn.execute(sql, (name,))
+            # 删除材料
+            sql = "DELETE FROM material WHERE task_id = ?"
+            self.conn.execute(sql, (task["msg"][0][0],))
+            self.conn.commit()
+            return f"把{name}删掉了喵~"
+        except Exception as e:
+            self.conn.rollback()
+            return f"呜哇！报错了喵！\n{e}"
 
     def commit_task(self, parts, event: AstrMessageEvent):
         # name 2, materia 3,PersonInCharge 4, location 5
@@ -101,25 +109,23 @@ class TaskUtils:
         path = self.image_utils.image_fix(path)
         return path
 
-    def set_task(self, parts, event):
-        task = self.get_task_by_name(parts[2])
+    def set_task(self, location, dimension, original_name, name, event):
+        task = self.get_task_by_name(original_name)
         if task["code"] != 200:
-            return f"没有{parts[2]}喵~"
+            return f"没有{original_name}喵~"
 
         # 非创建者并且非管理员不可修改
         if task["msg"][0][4] != event.message_obj.sender.nickname and not event.is_admin():
-            return f"{parts[2]}才不是你的喵~"
+            return f"{original_name}才不是你的喵~"
 
         # 校验新名字是否存在
-        new_task = self.get_task_by_name(parts[3])
+        new_task = self.get_task_by_name(name)
         if new_task["code"] == 200:
-            return f"已经有{parts[3]}了喵~"
+            return f"已经有{name}了喵~"
 
         # TODO: 命名
         sql = "UPDATE task SET name = ?,location = ?,dimension = ? WHERE name = ?"
-        # 5x 6y 7z
-        dimension = f"{parts[5]} {parts[6]} {parts[7]}"
-        self.conn.execute(sql, (parts[3], parts[4], dimension, parts[2]))
+        self.conn.execute(sql, (name, location, dimension, original_name))
         return "修改成功"
 
     def download_file(self, url, file_path):
@@ -139,40 +145,65 @@ class TaskUtils:
             return False
 
     def task_material(self, url, file_name, session_id: str, task_temp: TTLCache):
-        # url:文件链接 file_name:文件名称 session_id:会话ID task_temp:缓存的信息
-
-        # 获取会话id
-        task_temp_info = task_temp[session_id]
-
-        # 获取文件路径
-        file_path = os.path.join(self.config_utils.get_plugin_path(), "data", file_name)
-        if not self.download_file(url, file_path):
-            return "文件下载失败喵~"
-        fp = self.file_parser.parse(file_path)
-        os.remove(file_path)
-        if fp["code"] != 200:
-            return fp["msg"]
         try:
-            # 插入task数据库
-            task = {
-                "name": task_temp_info["name"],
-                "location": task_temp_info["location"],
-                "dimension": task_temp_info["dimension"],
-                "create_user": task_temp_info["sender_name"],
-                "create_user_id": task_temp_info["sender_id"],
-            }
-            sql = "insert into task(name,location,dimension,create_user,create_user_id) values (?, ?, ?, ?, ?);"
-            cursor = self.conn.execute(sql, (task["name"], task["location"], task["dimension"], task["create_user"], task["create_user_id"]))
-
-            task_id = cursor.lastrowid
-            logger.error(f'task_id: {int(task_id)}')
-
-            # TODO: 插入材料列表数据库
-            # MaterialList = json.dumps(task["MaterialList"], ensure_ascii=False)
+            # 获取任务信息
+            task_temp_info = task_temp[session_id]
+            
+            # 创建任务记录
+            task_id = self._create_task(task_temp_info)
+            if not task_id:
+                return "创建任务记录失败喵~"
+            
+            # 处理材料文件
+            material_list = self._process_material_file(url, file_name, task_id)
+            if not material_list:
+                self.conn.rollback()
+                return "处理材料文件失败喵~"
+            
+            # 插入材料数据
+            self._insert_material_data(material_list)
+            
+            # 提交事务并清理缓存
             self.conn.commit()
             task_temp.pop(session_id)
             return "上传材料列表成功喵~"
+            
         except Exception as e:
             self.conn.rollback()
-            logger.error(e)
+            logger.error(f"task_material 处理失败: {e}")
             return f"报错了喵~ \n {e}"
+    
+    def _create_task(self, task_temp_info: dict) -> int:
+        task_data = (
+            task_temp_info["name"],
+            task_temp_info["location"], 
+            task_temp_info["dimension"],
+            task_temp_info["sender_name"],
+            task_temp_info["sender_id"]
+        )
+        
+        sql = "INSERT INTO task(name,location,dimension,create_user,create_user_id) VALUES (?, ?, ?, ?, ?)"
+        cursor = self.conn.execute(sql, task_data)
+        return cursor.lastrowid
+    
+    def _process_material_file(self, url: str, file_name: str, task_id: int) -> list:
+        # 下载文件
+        file_path = os.path.join(self.config_utils.get_plugin_path(), "data", file_name)
+        if not self.download_file(url, file_path):
+            return None
+        
+        try:
+            # 解析文件
+            parse_result = self.file_parser.parse(file_path, int(task_id))
+            if parse_result["code"] != 200:
+                return None
+            
+            return parse_result["msg"]
+        finally:
+            # 确保临时文件被删除
+            if os.path.exists(file_path):
+                os.remove(file_path)
+    
+    def _insert_material_data(self, material_list: list):
+        sql = "INSERT INTO material(name,name_id,total,commit_count,number,task_id) VALUES (?, ?, ?, ?, ?, ?)"
+        self.conn.executemany(sql, material_list)

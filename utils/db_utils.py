@@ -13,13 +13,24 @@ class DbUtils:
         try:
             sql = '''
             CREATE TABLE IF NOT EXISTS "task" (
-                "id" INTEGER NOT NULL,
+                "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
                 "name" TEXT NOT NULL,
                 "location" TEXT NOT NULL,
                 "dimension" TEXT NOT NULL,
                 "create_user" TEXT NOT NULL,
                 "create_user_id" TEXT NOT NULL,
                 PRIMARY KEY ("id")
+            );
+                
+            CREATE TABLE IF NOT EXISTS "material" (
+              "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+              "name" TEXT,
+              "name_id" text,
+              "total" integer,
+              "recipient" TEXT,
+              "commit_count" integer,
+              "number" INTEGER,
+              "task_id" INTEGER
             );
             '''
             cur.execute(sql)
