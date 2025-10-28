@@ -394,7 +394,8 @@ class CommandUtils:
             task = self.task_utils.get_task_by_name(task_name)
             if task["code"] != 200:
                 return {"type":"text","msg":f"没找到{task_name}喵~"}
-            url = self.task_utils.render(task["msg"])
+            materia = self.task_utils.get_material_list_by_task_id(task['msg'][0][0])
+            url = self.task_utils.render(task["msg"], materia['msg'])
             return {"type":"image", "msg":url}
 
         # TODO 认领材料
@@ -460,7 +461,10 @@ class CommandUtils:
                     return None
 
                 # TODO: 解析投影源文件
-                ret = await client.api.call_action('get_group_file_url', **payloads)
+                try:
+                    ret = await client.api.call_action('get_group_file_url', **payloads)
+                except Exception as e:
+                    return f'文件获取失败喵~\n{e}'
                 return self.task_utils.task_material(ret['url'], filename, f'{event.get_group_id()}_{event.get_sender_id()}', task_temp)
         return None
 

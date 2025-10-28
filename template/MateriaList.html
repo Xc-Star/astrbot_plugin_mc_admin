@@ -14,7 +14,7 @@
         body {
             font-family: 'Microsoft YaHei', 'PingFang SC', 'Helvetica Neue', Arial, sans-serif;
             background: gray;
-            background-image: url({{ background_image_style }});
+            {{ background_image_style | safe }}
             padding: 20px;
             color: #333;
             margin: 0;
@@ -46,7 +46,7 @@
             font-size: 28px;
             font-weight: bold;
             margin-bottom: 20px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.8), 0 0 8px rgba(0,0,0,0.5);
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3), 0 0 8px rgba(0,0,0,0.5);
         }
 
         .material-title {
@@ -55,7 +55,7 @@
             color: white;
             margin-bottom: 16px;
             text-align: center;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.8), 0 0 6px rgba(0,0,0,0.5);
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3), 0 0 6px rgba(0,0,0,0.5);
         }
 
         .material-info {
@@ -78,13 +78,13 @@
         .info-label {
             font-weight: 600;
             color: rgba(255, 255, 255, 0.9);
-            text-shadow: 1px 1px 3px rgba(0,0,0,0.7), 0 0 4px rgba(0,0,0,0.4);
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.3), 0 0 4px rgba(0,0,0,0.4);
         }
 
         .info-value {
             color: white;
             font-weight: 500;
-            text-shadow: 1px 1px 3px rgba(0,0,0,0.7), 0 0 4px rgba(0,0,0,0.4);
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.3), 0 0 4px rgba(0,0,0,0.4);
         }
 
         .materials-table {
@@ -104,7 +104,7 @@
             padding: 12px 8px;
             text-align: center;
             font-size: 14px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.9), 0 0 6px rgba(0,0,0,0.6);
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3), 0 0 6px rgba(0,0,0,0.6);
         }
 
         .materials-table th:nth-child(2) {
@@ -118,7 +118,7 @@
             color: rgba(255, 255, 255, 0.9);
             font-size: 13px;
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            text-shadow: 2px 2px 3px rgba(0,0,0,0.8), 0 0 5px rgba(0,0,0,0.5);
+            text-shadow: 2px 2px 3px rgba(0,0,0,0.3), 0 0 5px rgba(0,0,0,0.5);
         }
 
         .materials-table td:nth-child(2) {
@@ -146,13 +146,13 @@
         .status-completed {
             color: #4ade80;
             font-weight: 600;
-            text-shadow: 2px 2px 3px rgba(0,0,0,0.8), 0 0 5px rgba(0,0,0,0.5);
+            text-shadow: 2px 2px 3px rgba(0,0,0,0.3), 0 0 5px rgba(0,0,0,0.5);
         }
 
         .status-not-started {
             color: #ef4444;
             font-weight: 600;
-            text-shadow: 2px 2px 3px rgba(0,0,0,0.8), 0 0 5px rgba(0,0,0,0.5);
+            text-shadow: 2px 2px 3px rgba(0,0,0,0.3), 0 0 5px rgba(0,0,0,0.5);
         }
     </style>
 </head>
@@ -171,9 +171,9 @@
                     <div>
                         <span class="info-label">所在纬度：</span>
                         <span class="info-value">
-                            {% if data.location == '0' %}
+                            {% if data.dimension == '0' %}
                                 主世界
-                            {% elif data.location == '1' %}
+                            {% elif data.dimension == '1' %}
                                 地狱
                             {% else %}
                                 末地
@@ -182,43 +182,39 @@
                     </div>
                     <div>
                         <span class="info-label">坐标：</span>
-                        <span class="info-value">{{ data.dimension }}</span>
+                        <span class="info-value">{{ data.location }}</span>
                     </div>
                 </div>
             </div>
 
-<!--            <table class="materials-table">-->
-<!--                <thead>-->
-<!--                    <tr>-->
-<!--                        <th>序号</th>-->
-<!--                        <th>材料</th>-->
-<!--                        <th>所需数量</th>-->
-<!--                        <th>所需/组</th>-->
-<!--                        <th>所需/组</th>-->
-<!--                        <th>已备数量</th>-->
-<!--                        <th>备货人</th>-->
-<!--                        <th>所在位置/假人</th>-->
-<!--                    </tr>-->
-<!--                </thead>-->
-<!--                <tbody>-->
-<!--                    {% for Materia in data.MaterialList %}-->
-<!--                        <tr>-->
-<!--                            <td>{{ Materia.id }}</td>-->
-<!--&lt;!&ndash;                            <td><i class="icon-placeholder"></i>{{ Materia.name }}</td>&ndash;&gt;-->
-<!--                            <td>{{ Materia.name }}</td>-->
-<!--                            <td>{{ Materia.total }}</td>-->
-<!--                            <td>{{ Materia.GroupTotal }}</td>-->
-<!--                            <td>{{ Materia.BoxTotal }}</td>-->
-<!--                            <td>-->
-<!--                                <span class="{% if Materia.progress >= Materia.total %}status-completed{% else %}status-not-started{% endif %}">{{ Materia.progress }}</span>-->
-<!--                            </td>-->
-<!--&lt;!&ndash;                            <td><span class="{% if Materia.progress == '是'%}status-completed{% else %}status-not-started{% endif %}">{{ Materia.progress }}</span></td>&ndash;&gt;-->
-<!--                            <td>{% if Materia.PersonInCharge == "" %}-{% else %}{{ Materia.PersonInCharge }}{% endif %}</td>-->
-<!--                            <td>{% if Materia.location == "" %}-{% else %}{{ Materia.location }}{% endif %}</td>-->
-<!--                        </tr>-->
-<!--                    {% endfor %}-->
-<!--                </tbody>-->
-<!--            </table>-->
+            <table class="materials-table">
+                <thead>
+                    <tr>
+                        <th>编号</th>
+                        <th>材料</th>
+                        <th>所需总数</th>
+                        <th>还需/盒</th>
+                        <th>还需/组</th>
+                        <th>备货人</th>
+                        <th>所在位置/假人</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for materia in data.materia_list %}
+                        <tr>
+                            <td>{{ materia.number }}</td>
+<!--                            <td><i class="icon-placeholder"></i>{{ materia.name }}</td>-->
+                            <td>{{ materia.name }}</td>
+                            <td>{{ materia.total }}</td>
+                            <td>{{ materia.remaining_box }}</td>
+                            <td>{{ materia.remaining_group }}</td>
+<!--                            <td><span class="{% if materia.progress == '是'%}status-completed{% else %}status-not-started{% endif %}">{{ materia.progress }}</span></td>-->
+                            <td>{% if materia.recipient == "" %}-{% else %}{{ materia.recipient }}{% endif %}</td>
+                            <td>{% if materia.location == "" %}-{% else %}{{ materia.location }}{% endif %}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
 </body>
