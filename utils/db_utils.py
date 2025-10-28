@@ -30,7 +30,8 @@ class DbUtils:
               "recipient" TEXT,
               "commit_count" integer,
               "number" INTEGER,
-              "task_id" INTEGER
+              "task_id" INTEGER,
+              "location" TEXT
             );
             '''
             cur.execute(sql)

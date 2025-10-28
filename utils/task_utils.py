@@ -1,4 +1,5 @@
 import json
+import math
 
 from cachetools import TTLCache
 
@@ -84,24 +85,40 @@ class TaskUtils:
         else:
             return {"code": 500, "msg": f"没找到{name}喵~"}
 
-    def render(self, task):
-        # TODO: 命名
+    def get_material_list_by_task_id(self, task_id) -> dict:
+        sql = f"select * from material where task_id = {task_id}"
+        sql_res = self.conn.execute(sql).fetchall()
+        if sql_res:
+            return {"code": 200, "msg": sql_res}
+        else:
+            return {"code": 500, "msg": f"没找到材料喵~"}
+
+    def render(self, task, materia_list):
         _task = {
+            "id": task[0][0],
             "name": task[0][1],
-            "dimension": task[0][2],
-            "location": task[0][3],
+            "location": task[0][2],
+            "dimension": task[0][3],
             "create_user": task[0][4],
-            "MaterialList": [],
+            "materia_list": process_materia_list(materia_list),
         }
         templates = os.path.join(self.config_utils.get_plugin_path(), "template")
         output = os.path.join(self.config_utils.get_plugin_path(), "data")
         env = Environment(loader=FileSystemLoader(templates))
         template = env.get_template("MateriaList.html")
-        background_image_style = self.image_utils.get_random_background_image()
+        if self.config_utils.enable_background_image:
+            background_image_path = self.image_utils.get_random_background_image()
+            if background_image_path:
+                web_background_path = background_image_path.replace('\\', '/')
+                background_image_style = f"background-image: url('{web_background_path}'); background-size: cover; background-position: center; background-repeat: no-repeat;"
+            else:
+                background_image_style = ""
+        else:
+            background_image_style = ""
         html_content = template.render({"data": _task, "background_image_style": background_image_style})
         hti = Html2Image(output_path=output, custom_flags=['--no-sandbox', '--disable-dev-shm-usage'])
         base_height = 134
-        task_total = len(_task["MaterialList"])
+        task_total = len(_task["materia_list"])
         content_height = task_total * 47
         height = max(600, base_height + content_height)
         hti.screenshot(html_str=html_content, save_as="task.png", size=(650, height))
@@ -123,10 +140,9 @@ class TaskUtils:
         if new_task["code"] == 200:
             return f"已经有{name}了喵~"
 
-        # TODO: 命名
         sql = "UPDATE task SET name = ?,location = ?,dimension = ? WHERE name = ?"
         self.conn.execute(sql, (name, location, dimension, original_name))
-        return "修改成功"
+        return "修改成功喵~"
 
     def download_file(self, url, file_path):
         try:
@@ -205,5 +221,23 @@ class TaskUtils:
                 os.remove(file_path)
     
     def _insert_material_data(self, material_list: list):
-        sql = "INSERT INTO material(name,name_id,total,commit_count,number,task_id) VALUES (?, ?, ?, ?, ?, ?)"
+        sql = "INSERT INTO material(name,name_id,total, recipient,commit_count,number,task_id) VALUES (?, ?, ?, ?, ?, ?, ?)"
         self.conn.executemany(sql, material_list)
+
+def process_materia_list(materia_list: list) -> list:
+    def calculate_remaining_box(total, commit_count):
+        return math.floor((total - commit_count) / 1728)
+    def calculate_remaining_group(total, commit_count):
+        return round(((total - commit_count) % 1728) / 64, 2)
+    res = []
+    for materia in materia_list:
+        res.append({
+            "number": materia[6], # 编号
+            "name": materia[1], # 材料名字
+            "total": materia[3], # 所需总数
+            "remaining_box": calculate_remaining_box(int(materia[3]), int(materia[5])), # 还差 - 盒
+            "remaining_group": calculate_remaining_group(int(materia[3]), int(materia[5])), # 还差 - 组
+            "recipient": materia[4], # 负责人
+            "location": materia[8] if materia[8] is not None else '', # 所在位置
+        })
+    return res
