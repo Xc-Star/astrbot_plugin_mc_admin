@@ -215,7 +215,13 @@
                             <td>{{ materia.remaining_group }}</td>
 <!--                            <td><span class="{% if materia.progress == '是'%}status-completed{% else %}status-not-started{% endif %}">{{ materia.progress }}</span></td>-->
                             <td>{% if materia.recipient == "" %}-{% else %}{{ materia.recipient }}{% endif %}</td>
-                            <td>{% if materia.location == "" %}-{% else %}{{ materia.location }}{% endif %}</td>
+                            <td>
+                                {% if materia.location == "" %}
+                                    -
+                                {% else %}
+                                    {{ materia.location | replace('"', '') | replace('[', '') | replace(']', '') | replace(',', '<br>') }}
+                                {% endif %}
+                            </td>
                         </tr>
                     {% endfor %}
                 </tbody>

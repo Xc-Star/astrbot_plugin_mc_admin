@@ -225,6 +225,58 @@ class TaskUtils:
         sql = "INSERT INTO material(name,name_id,total, recipient,commit_count,number,task_id) VALUES (?, ?, ?, ?, ?, ?, ?)"
         self.conn.executemany(sql, material_list)
 
+    def update_material(self, task_name, material_number, event: AstrMessageEvent):
+        # 获取任务id
+        task_res = self.get_task_by_name(task_name)
+        if (task_res['code'] != 200):
+            return f"没找到{task_name}喵~"
+        task = task_res["msg"]
+        sql = "SELECT * FROM material WHERE task_id = ? and number = ?"
+        sql_res = self.conn.execute(sql, (task[0][0], material_number)).fetchall()
+        if sql_res:
+            try:
+                sql = "UPDATE material SET recipient = ? WHERE id = ?"
+                self.conn.execute(sql, (event.get_sender_name(), sql_res[0][0]))
+                self.conn.commit()
+                return "领取成功喵~"
+            except Exception as e:
+                self.conn.rollback()
+                return f"呜哇！出错了喵！\n{e}"
+        else:
+            return f"没找到{task_name}里面的{material_number}号喵~"
+
+    def commit_material(self, task_name, material_number, location, count, group, box):
+        # 获取任务id
+        task_res = self.get_task_by_name(task_name)
+        if (task_res['code'] != 200):
+            return f"没找到{task_name}喵~"
+        task = task_res["msg"]
+        sql = "SELECT * FROM material WHERE task_id = ? and number = ?"
+        sql_res = self.conn.execute(sql, (task[0][0], material_number)).fetchall()
+        if sql_res:
+            try:
+                commited_count = int(sql_res[0][5])
+                total = int(sql_res[0][3])
+                if commited_count >= total:
+                    return f"{sql_res[0][1]}已经完成了喵~"
+                sql = "UPDATE material SET commit_count = ?, location = ? WHERE id = ?"
+                commit_count = commited_count + count + (group * 64) + (box * 1728)
+                sql_location = sql_res[0][8]
+                if sql_location is None:
+                    locations = [location]
+                else:
+                    locations = json.loads(sql_res[0][8])
+                    locations.append(location)
+                self.conn.execute(sql, (commit_count, json.dumps(locations), sql_res[0][0]))
+                self.conn.commit()
+                return "提交成功！谢谢喵~"
+            except Exception as e:
+                self.conn.rollback()
+                return f"呜哇！出错了喵！\n{e}"
+        else:
+            return f"没找到{task_name}里面的{material_number}号喵~"
+
+
 def process_materia_list(materia_list: list) -> list:
     def calculate_remaining_box(total, commit_count):
         return math.floor((total - commit_count) / 1728)
