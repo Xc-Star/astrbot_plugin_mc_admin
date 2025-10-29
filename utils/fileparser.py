@@ -1,4 +1,5 @@
 from .item_mapping import ItemMapping
+from .parse_litematic import parse_litematic
 import os
 
 
@@ -33,11 +34,24 @@ class FileParser:
         elif file_path.endswith(".csv"):
             interval, head, tail, name_index, d = ",", 2, -1, 0,  1
         elif file_path.endswith(".litematic"):
-            # TODO: 解析litematic源文件
-            pass
+            # 解析litematic源文件
+            try:
+                parse_result = parse_litematic(file_path)
+                # 合并多区域的材料
+                merged_blocks = self.merged_regions(parse_result)
+
+                result = []
+                number = 1
+                for block_id in merged_blocks:
+                    result.append((self.item_mapping.get_item_name(block_id), block_id, merged_blocks[block_id], '', 0, number, task_id))
+                    number += 1
+
+                return {"code": 200, "msg": result}
+            except Exception as e:
+                return {"code": 500, "msg": f"解析投影源文件报错喵~: {str(e)}"}
         else:
             return {"code":500,"msg":"解析不了喵~"}
-        # 读取材料列表文件进行处理
+        # 处理txt和csv
         with open(file_path, "r", encoding="utf-8") as file:
             try:
                 # 读取文件的所有内容
@@ -63,3 +77,14 @@ class FileParser:
             except Exception as e:
                 print(e)
                 return {"code":500,"msg":"解析不了喵~"}
+
+    def merged_regions(self, parse_result):
+        # 合并所有区域的同种材料
+        merged_blocks = {}
+        if "regions" in parse_result:
+            for region_name, region_data in parse_result["regions"].items():
+                if "most_common_blocks" in region_data:
+                    for block_id, count in region_data["most_common_blocks"].items():
+                        # 累加相同block_id的数量
+                        merged_blocks[block_id] = merged_blocks.get(block_id, 0) + count
+        return merged_blocks

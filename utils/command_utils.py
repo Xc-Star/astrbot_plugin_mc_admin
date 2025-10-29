@@ -465,7 +465,7 @@ class CommandUtils:
                 }
                 filename = json_dict['message'][0]['data']['file']
 
-                if not filename.endswith('.txt') and not filename.endswith('.csv'):
+                if not filename.endswith('.txt') and not filename.endswith('.csv') and not filename.endswith('.litematic'):
                     return None
 
                 try:
