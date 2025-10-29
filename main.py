@@ -63,8 +63,8 @@ class McAdminPlugin(Star):
     @filter.event_message_type(filter.EventMessageType.ALL)
     @in_enabled_groups()
     async def on_all_message(self, event: AstrMessageEvent):
-        # if f'{event.get_group_id()}_{event.get_sender_id()}' not in list(self.task_temp.keys()):
-        #     return
+        if f'{event.get_group_id()}_{event.get_sender_id()}' not in list(self.task_temp.keys()):
+            return
         res = await self.command_utils.material(self.task_temp, event)
         if res is not None:
             yield event.plain_result(res)

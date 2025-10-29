@@ -162,7 +162,7 @@
 </head>
 <body>
     <div class="container">
-        <div class="title">{{ data.name }} 材料列表</div>
+        <div class="title">test 材料列表</div>
 
         <div class="material-card">
 
@@ -170,23 +170,17 @@
                 <div class="info-row">
                     <div>
                         <span class="info-label">上传者：</span>
-                        <span class="info-value">{{ data.create_user }}</span>
+                        <span class="info-value">xc</span>
                     </div>
                     <div>
                         <span class="info-label">所在纬度：</span>
                         <span class="info-value">
-                            {% if data.dimension == '0' %}
-                                主世界
-                            {% elif data.dimension == '1' %}
-                                地狱
-                            {% else %}
-                                末地
-                            {% endif %}
+                            主世界
                         </span>
                     </div>
                     <div>
                         <span class="info-label">坐标：</span>
-                        <span class="info-value">{{ data.location }}</span>
+                        <span class="info-value">1</span>
                     </div>
                 </div>
             </div>
@@ -204,25 +198,18 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for materia in data.materia_list %}
+
                         <tr>
-                            <td>{{ materia.number }}</td>
-<!--                            <td><i class="icon-placeholder"></i>{{ materia.name }}</td>-->
-                            <td>{{ materia.name }}</td>
-                            <td>{{ materia.total }}</td>
-                            <td>{{ materia.remaining_box }}</td>
-                            <td>{{ materia.remaining_group }}</td>
-<!--                            <td><span class="{% if materia.progress == '是'%}status-completed{% else %}status-not-started{% endif %}">{{ materia.progress }}</span></td>-->
-                            <td>{% if materia.recipient == "" %}-{% else %}{{ materia.recipient }}{% endif %}</td>
+                            <td>1</td>
+                            <td>1</td>
+                            <td>1</td>
+                            <td>1</td>
+                            <td>1</td>
+                            <td>1</td>
                             <td>
-                                {% if materia.location == "" %}
-                                    -
-                                {% else %}
-                                    {{ materia.location | replace('"', '') | replace('[', '') | replace(']', '') | replace(',', '<br>') }}
-                                {% endif %}
+                                xz<br>xz1<br>xz2
                             </td>
                         </tr>
-                    {% endfor %}
                 </tbody>
             </table>
         </div>

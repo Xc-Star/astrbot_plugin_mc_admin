@@ -450,6 +450,7 @@ class CommandUtils:
             0", "font": 14, "sub_type": "normal", "message": [{"type": "text", "data": {"text": "/task add ;"drop table task#
             0 θ θ 0"}}], "message_format": "array", "post_type": "message", "group_id": 534107220, "group_name": "插件测试"}
             """
+            logger.error("json被注入了喵～")
             return None
 
         # 消息类型
