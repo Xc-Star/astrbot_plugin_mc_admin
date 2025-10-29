@@ -337,20 +337,6 @@ class CommandUtils:
             # 返回工程列表
             return {"type":"text","msg":self.task_utils.get_task_list()}
 
-        elif msg.startswith('task commit'):
-            # 提交材料，TODO: 提交进度，接取任务
-            """
-            命令结构：task commit <工程id> <材料id> <已备数量> 提交材料的备货情况
-            处理逻辑:
-            不符合命令结构 -> 返回命令结构
-            符合命令结构 -> 调用数据库 -> 判断工程是否存在 -> 修改数据(存在)｜返回提示(不存在) -> 提交数据修改(存在)
-            """
-            parts = msg.split(' ')
-            if len(parts) != 6:
-                return {"type": "text", "msg": "是/task commit <工程名称> <材料序号> <进度> <材料所在假人>喵~"}
-
-            return {"type":"text","msg":self.task_utils.commit_task(parts, event)}
-
         elif msg.startswith('task set'):
             # 修改工程信息
             """
@@ -364,7 +350,7 @@ class CommandUtils:
             # 校验命令
             parts = msg.split(' ')
             if len(parts) != 8:
-                return {"type": "text",  "msg": "请使用: /task set <工程名字> <新工程名称> <0-主世界 1-地狱 2-末地> <x y z>"}
+                return {"type": "text",  "msg": "是: /task set <工程名字> <新工程名称> <0-主世界 1-地狱 2-末地> <x y z>喵！"}
 
             location = f"{parts[5]} {parts[6]} {parts[7]}"
             dimension = parts[4]
@@ -376,6 +362,36 @@ class CommandUtils:
                 return {"type": "text", "msg": error_msg}
 
             return {"type": "text", "msg": self.task_utils.set_task(location, dimension, original_name, name, event)}
+
+        # 认领材料
+        elif msg.startswith('task claim'):
+            parts = msg.split(' ')
+            if len(parts) != 4:
+                return {"type":"text","msg":"是/task claim <工程名字> <材料编号>喵~"}
+            task_name = parts[2]
+            material_number = parts[3]
+            return {"type":"text","msg":self.task_utils.update_material(task_name, material_number, event)}
+
+        # 提交材料
+        elif msg.startswith('task commit'):
+            parts = msg.split(' ')
+            if len(parts) < 6:
+                return {"type":"text","msg":"是/task commit <工程名称> <材料序号> <n 个/组/盒> <材料所在位置/假人>喵~"}
+            task_name = parts[2]
+            material_number = parts[3]
+            location = parts[5]
+            # 解析提交的单位
+            if parts[4].endswith('个'):
+                return {"type":"text",
+                        "msg": self.task_utils.commit_material(task_name, material_number, location, int(parts[4][:-1]), 0, 0)}
+            elif parts[4].endswith('组'):
+                return {"type": "text",
+                        "msg": self.task_utils.commit_material(task_name, material_number, location, 0, int(parts[4][:-1]), 0)}
+            elif parts[4].endswith('盒'):
+                return {"type": "text",
+                        "msg": self.task_utils.commit_material(task_name, material_number, location, 0, 0, int(parts[4][:-1]))}
+
+            return {"type":"text","msg":"是/task commit <工程名称> <材料序号> <n 个/组/盒> <材料所在位置/假人>喵~"}
 
         elif msg.startswith('task'):
             """
@@ -397,14 +413,6 @@ class CommandUtils:
             materia = self.task_utils.get_material_list_by_task_id(task['msg'][0][0])
             url = self.task_utils.render(task["msg"], materia['msg'])
             return {"type":"image", "msg":url}
-
-        # TODO 认领材料
-        elif msg.startswith('task claim'):
-            pass
-
-        # TODO 取消认领材料
-        elif msg.startswith('task EscClaim'):
-            pass
 
         return {"type": "text", "msg": self.message.get_task_help_message()}
 
@@ -460,7 +468,6 @@ class CommandUtils:
                 if not filename.endswith('.txt') and not filename.endswith('.csv'):
                     return None
 
-                # TODO: 解析投影源文件
                 try:
                     ret = await client.api.call_action('get_group_file_url', **payloads)
                 except Exception as e:
