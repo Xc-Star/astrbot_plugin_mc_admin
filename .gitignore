@@ -37,6 +37,10 @@ __MACOSX/
 *.bak
 *.swp
 
+# 生成的图片
+list.png
+task.png
+
 # 环境变量文件
 .env
 .env.*
