@@ -202,6 +202,6 @@ class ImageUtils:
         读取到图片，裁切图片后返回新的url
         """
         image = Image.open(url)
-        image = image.crop((0, 0, image.width - 16, image.height - 100))
+        image = image.crop((0, 0, image.width, image.height - 100))
         image.save(url)
         return url

@@ -10,7 +10,6 @@ class FileParser:
         parent_dir = os.path.dirname(current_dir)  # 回到插件根目录
         mapping_file_path = os.path.join(parent_dir, 'data', 'item_mapping.json')
         self.item_mapping = ItemMapping(mapping_file_path)
-        pass
 
     def get_gb_total(self,name,total) -> tuple:
         # 获取堆叠数量
@@ -75,7 +74,6 @@ class FileParser:
                     result.append((name, self.item_mapping.get_item_id(name), total, '', commit_count, number, task_id))
                 return {"code":200,"msg":result}
             except Exception as e:
-                print(e)
                 return {"code":500,"msg":"解析不了喵~"}
 
     def merged_regions(self, parse_result):

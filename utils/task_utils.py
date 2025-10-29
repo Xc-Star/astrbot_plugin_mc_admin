@@ -117,11 +117,25 @@ class TaskUtils:
             background_image_style = ""
         font = self.config_utils.get_font()
         html_content = template.render({"data": _task, "background_image_style": background_image_style, "font":font})
+        materia_list = _task['materia_list']
+        # bz为记录只有材料所在位置只有一个值或没有值的数量，lo_height为记录材料所在位置多于一个值所占的高度
+        bz = lo_height = 0
+        for materia in materia_list:
+            location = materia["location"]
+            if not location:
+                bz+=1
+                continue
+            location_json = json.loads(location)
+            if len(location_json) == 1:
+                bz+=1
+                continue
+            lo_height = lo_height + (len(location_json)+1) * 21
+
         hti = Html2Image(output_path=output, custom_flags=['--no-sandbox', '--disable-dev-shm-usage'], browser='chrome')
         base_height = 134
-        task_total = len(_task["materia_list"])
-        content_height = task_total * 47
-        height = max(600, base_height + content_height)
+        content_height = bz * 47
+        # 加1是防止整入是丢掉小数点后面的数字导致截图不全
+        height = max(600, int(base_height + content_height + lo_height)+1)
         hti.screenshot(html_str=html_content, save_as="task.png", size=(650, height))
         path = os.path.join(output, "task.png")
         path = self.image_utils.image_fix(path)
@@ -207,12 +221,14 @@ class TaskUtils:
         # 下载文件
         file_path = os.path.join(self.config_utils.get_plugin_path(), "data", file_name)
         if not self.download_file(url, file_path):
+            logger.error("文件下载失败")
             return None
         
         try:
             # 解析文件
             parse_result = self.file_parser.parse(file_path, int(task_id))
             if parse_result["code"] != 200:
+                logger.error(parse_result['msg'])
                 return None
             
             return parse_result["msg"]
