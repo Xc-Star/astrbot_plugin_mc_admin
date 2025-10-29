@@ -1,5 +1,14 @@
+from .item_mapping import ItemMapping
+import os
+
+
 class FileParser:
     def __init__(self):
+        # 正确设置映射文件路径
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        parent_dir = os.path.dirname(current_dir)  # 回到插件根目录
+        mapping_file_path = os.path.join(parent_dir, 'data', 'item_mapping.json')
+        self.item_mapping = ItemMapping(mapping_file_path)
         pass
 
     def get_gb_total(self,name,total) -> tuple:
@@ -48,8 +57,8 @@ class FileParser:
                     total = int(parts[name_index+1].strip())
                     commit_count = 0
                     number = len(result) + 1
-                    # 创建元组  TODO: name_id
-                    result.append((name, '', total, '', commit_count, number, task_id))
+                    # 创建元组
+                    result.append((name, self.item_mapping.get_item_id(name), total, '', commit_count, number, task_id))
                 return {"code":200,"msg":result}
             except Exception as e:
                 print(e)
