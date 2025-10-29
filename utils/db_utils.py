@@ -11,17 +11,17 @@ class DbUtils:
         # 初始化数据表
         cur = self.db_conn.cursor()
         try:
-            sql = '''
+            create_tableL_task_sql = '''
             CREATE TABLE IF NOT EXISTS "task" (
                 "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
                 "name" TEXT NOT NULL,
                 "location" TEXT NOT NULL,
                 "dimension" TEXT NOT NULL,
                 "create_user" TEXT NOT NULL,
-                "create_user_id" TEXT NOT NULL,
-                PRIMARY KEY ("id")
+                "create_user_id" TEXT NOT NULL
             );
-                
+            '''
+            create_tableL_material_sql = '''
             CREATE TABLE IF NOT EXISTS "material" (
               "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
               "name" TEXT,
@@ -34,7 +34,8 @@ class DbUtils:
               "location" TEXT
             );
             '''
-            cur.execute(sql)
+            cur.execute(create_tableL_task_sql)
+            cur.execute(create_tableL_material_sql)
         except:
             logger.error('数据库创建失败')
 

@@ -17,6 +17,7 @@ class ImageUtils:
         self.template_dir = os.path.join(plugin_path, 'template')
         self.enable_background_image = config_utils.enable_background_image
         self.background_image_dir = config_utils.background_image_path
+        self.config_utile = config_utils
 
     # 缓存模板内容
     _template_cache = None
@@ -30,19 +31,24 @@ class ImageUtils:
         try:
             # 1. 读取并缓存模板内容
             html_content = self._get_template_content()
-            
             # 2. 注入服务器数据
             html_content = self._inject_servers_data(html_content, servers_data)
-            
             # 3. 注入背景样式
             html_content = self._inject_background_style(html_content)
-
+            # TODO 4.注入字体
+            # html_content = self._inject_font(html_content)
             return html_content
         except Exception as e:
             logger.error(f"渲染模板失败: {str(e)}")
             # 发生错误时返回一个简单的错误页面
             return f"<html><body><h1>模板渲染错误喵~</h1><p>{str(e)}</p></body></html>"
-            
+
+    # TODO 4.注入字体
+    def _inject_font(self, html_content):
+        font = self.config_utile
+        html_content.replace('{{ font }}', font)
+        return html_content
+
     def _get_template_content(self):
         """获取模板内容，带缓存机制"""
         # 检查缓存是否存在

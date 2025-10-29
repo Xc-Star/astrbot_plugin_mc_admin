@@ -115,7 +115,8 @@ class TaskUtils:
                 background_image_style = ""
         else:
             background_image_style = ""
-        html_content = template.render({"data": _task, "background_image_style": background_image_style})
+        font = self.config_utils.get_font()
+        html_content = template.render({"data": _task, "background_image_style": background_image_style, "font":font})
         hti = Html2Image(output_path=output, custom_flags=['--no-sandbox', '--disable-dev-shm-usage'])
         base_height = 134
         task_total = len(_task["materia_list"])

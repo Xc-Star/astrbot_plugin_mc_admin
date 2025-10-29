@@ -1,5 +1,8 @@
+import base64
 import os
 import json
+import pathlib
+
 from astrbot.core import AstrBotConfig
 from astrbot.api import logger
 
@@ -77,8 +80,10 @@ class ConfigUtils:
         # 获取插件的根目录（向上两级目录：utils目录 -> 插件根目录）
         return os.path.dirname(os.path.dirname(current_file_path))
 
-    def get_db_path(self):
-        # 获取数据库的地址
+
+    def get_font(self):
         plugin_path = self.get_plugin_path()
-        db_path = os.path.join(plugin_path, 'data', 'data_v3.db')
-        return db_path
+        font_path = os.path.join(plugin_path, 'template', 'font', 'jiyinghuipianheyuan.ttf')
+        b64 = base64.b64encode(pathlib.Path(font_path).read_bytes()).decode()
+        font = f"data:font/ttf;base64,{b64}"
+        return font
