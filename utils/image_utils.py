@@ -35,19 +35,17 @@ class ImageUtils:
             html_content = self._inject_servers_data(html_content, servers_data)
             # 3. 注入背景样式
             html_content = self._inject_background_style(html_content)
-            # TODO 4.注入字体
-            # html_content = self._inject_font(html_content)
+            # 4.注入字体
+            html_content = self._inject_font(html_content)
             return html_content
         except Exception as e:
             logger.error(f"渲染模板失败: {str(e)}")
             # 发生错误时返回一个简单的错误页面
             return f"<html><body><h1>模板渲染错误喵~</h1><p>{str(e)}</p></body></html>"
 
-    # TODO 4.注入字体
     def _inject_font(self, html_content):
-        font = self.config_utile
-        html_content.replace('{{ font }}', font)
-        return html_content
+        font = self.config_utile.get_font()
+        return html_content.replace('{{ font }}', font)
 
     def _get_template_content(self):
         """获取模板内容，带缓存机制"""
@@ -185,7 +183,7 @@ class ImageUtils:
             self._take_screenshot,
             self.render_list_template(servers_data),
             'list.png',
-            (482, height)
+            (485, height)
         )
         # 将图片处理也放在线程池中执行
         return await asyncio.to_thread(self.image_fix, url[0])
@@ -204,6 +202,6 @@ class ImageUtils:
         读取到图片，裁切图片后返回新的url
         """
         image = Image.open(url)
-        image = image.crop((0, 0, image.width, image.height - 100))
+        image = image.crop((0, 0, image.width - 16, image.height - 100))
         image.save(url)
         return url
