@@ -15,9 +15,12 @@ class ItemMapping:
             mapping_file_path: 映射文件路径，默认为插件data目录下的item_mapping.json
         """
         if mapping_file_path is None:
-            # 获取插件data目录路径
+            # 计算插件根目录下的 data/item_mapping.json
+            # 当前文件位于: <plugin_root>/utils/fileparse/item_mapping.py
             current_dir = os.path.dirname(os.path.abspath(__file__))
-            self.mapping_file_path = os.path.join(current_dir, 'data', 'item_mapping.json')
+            utils_dir = os.path.dirname(current_dir)
+            plugin_root = os.path.dirname(utils_dir)
+            self.mapping_file_path = os.path.join(plugin_root, 'data', 'item_mapping.json')
         else:
             self.mapping_file_path = mapping_file_path
             

@@ -9,8 +9,8 @@ import httpx
 from astrbot.core.platform import AstrMessageEvent
 from .config_utils import ConfigUtils
 import sqlite3
-from .image_utils import ImageUtils
-from .fileparser import FileParser
+from .media.image import ImageUtils
+from .fileparse.main import FileParser
 
 
 # 常量定义（兼容性保留）
@@ -23,18 +23,11 @@ class MaterialConstants:
     ITEMS_PER_STACK = 64  # 每组物品数量
     STACKS_PER_BOX = 27  # 每组箱子（27组）
     ITEMS_PER_BOX = 1728  # 每箱物品数量 (64 * 27)
-    
-    # 已废弃：使用 image_utils.MATERIAL_* 常量
-    BASE_HEIGHT = 197  # 已废弃，保留兼容性
-    MATERIAL_ROW_HEIGHT = 71  # 已废弃，保留兼容性
-    LOCATION_LINE_HEIGHT = 35  # 已废弃，保留兼容性
-    MIN_SCREENSHOT_HEIGHT = 960  # 已废弃，保留兼容性
-    SCREENSHOT_WIDTH = 1200  # 已废弃，保留兼容性
 
 
 class TaskUtils:
-    def __init__(self, config_utils: ConfigUtils, conn: sqlite3.Connection):
-        self.image_utils = ImageUtils(config_utils)
+    def __init__(self, config_utils: ConfigUtils, conn: sqlite3.Connection, image_utils: ImageUtils = None):
+        self.image_utils = image_utils if image_utils is not None else ImageUtils(config_utils)
         self.config_utils = config_utils
         self.conn = conn
         self.file_parser = FileParser()
