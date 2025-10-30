@@ -5,8 +5,8 @@ import random
 import base64
 import math
 from jinja2 import FileSystemLoader, Environment
-from .config_utils import ConfigUtils
-from .browser_manager import BrowserManager
+from ..config_utils import ConfigUtils
+from .browser import BrowserManager
 from astrbot.api import logger
 
 
@@ -44,13 +44,13 @@ class ImageUtils:
     """图片生成工具类，负责生成服务器列表和材料列表图片"""
     
     def __init__(self, config_utils: ConfigUtils):
-        self.output = os.path.join(config_utils.get_plugin_path(), "data")
-        current_file_path = os.path.abspath(__file__)
-        plugin_path = os.path.dirname(os.path.dirname(current_file_path))
-        self.template_dir = os.path.join(plugin_path, 'template')
-        self.enable_background_image = config_utils.enable_background_image
-        self.background_image_dir = config_utils.background_image_path
+        # 先保存配置工具供后续使用
         self.config_utils = config_utils
+        self.output = os.path.join(self.config_utils.get_plugin_path(), "data")
+        # 模板目录定位到插件根目录下的 template
+        self.template_dir = os.path.join(self.config_utils.get_plugin_path(), 'template')
+        self.enable_background_image = self.config_utils.enable_background_image
+        self.background_image_dir = self.config_utils.background_image_path
         
         # 使用 BrowserManager 管理 browser 实例
         self.browser_manager = BrowserManager()
@@ -355,12 +355,12 @@ class ImageUtils:
             list: 处理后的材料列表
         """
         def calculate_remaining_box(total, commit_count):
-            """计算剩余箱数"""
-            return math.floor((total - commit_count) / ITEMS_PER_BOX)
+            """计算剩余盒数"""
+            return max(0, math.floor((total - commit_count) / ITEMS_PER_BOX))
         
         def calculate_remaining_group(total, commit_count):
-            """计算剩余组数（去除箱数后）"""
-            remaining_items = (total - commit_count) % ITEMS_PER_BOX
+            """计算剩余组数（去除盒数后）"""
+            remaining_items = max(0, (total - commit_count)) % ITEMS_PER_BOX
             return round(remaining_items / ITEMS_PER_STACK, 2)
         
         res = []

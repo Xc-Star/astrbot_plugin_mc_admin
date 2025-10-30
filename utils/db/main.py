@@ -34,8 +34,18 @@ class DbUtils:
               "location" TEXT
             );
             '''
+            create_table_location_sql = '''
+            CREATE TABLE IF NOT EXISTS "location" (
+              "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+              "name" TEXT NOT NULL UNIQUE,
+              "overworld" TEXT,
+              "nether" TEXT,
+              "end" TEXT
+            );
+            '''
             cur.execute(create_tableL_task_sql)
             cur.execute(create_tableL_material_sql)
+            cur.execute(create_table_location_sql)
         except:
             logger.error('数据库创建失败')
 

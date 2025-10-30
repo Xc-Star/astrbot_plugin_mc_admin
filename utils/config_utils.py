@@ -58,17 +58,6 @@ class ConfigUtils:
         """
         return self.bot_prefix
 
-    def get_loc_list(self):
-        path = os.path.join(self.get_plugin_path(), 'data', 'loc.json')
-        with open(path, 'r', encoding='utf-8') as f:
-            return json.load(f)['server_loc']
-
-    def set_loc_list(self, list: list):
-        path = os.path.join(self.get_plugin_path(), 'data', 'loc.json')
-        json_str = {'server_loc': list}
-        with open(path, 'w', encoding='utf-8') as f:
-            json.dump(json_str, f, ensure_ascii=False, indent=4)
-
     def get_plugin_path(self):
         """获取当前插件的路径
 
