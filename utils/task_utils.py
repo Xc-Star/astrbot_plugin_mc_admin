@@ -1,5 +1,4 @@
 import json
-import math
 
 from cachetools import TTLCache
 
@@ -8,12 +7,30 @@ import os
 
 import httpx
 from astrbot.core.platform import AstrMessageEvent
-from html2image import Html2Image
-from jinja2 import FileSystemLoader, Environment
 from .config_utils import ConfigUtils
 import sqlite3
 from .image_utils import ImageUtils
 from .fileparser import FileParser
+
+
+# 常量定义（兼容性保留）
+class MaterialConstants:
+    """材料计算相关常量
+    
+    注意：部分常量已迁移到 image_utils 中，这里保留以保持兼容性
+    """
+    # 物品数量常量
+    ITEMS_PER_STACK = 64  # 每组物品数量
+    STACKS_PER_BOX = 27  # 每组箱子（27组）
+    ITEMS_PER_BOX = 1728  # 每箱物品数量 (64 * 27)
+    
+    # 已废弃：使用 image_utils.MATERIAL_* 常量
+    BASE_HEIGHT = 197  # 已废弃，保留兼容性
+    MATERIAL_ROW_HEIGHT = 71  # 已废弃，保留兼容性
+    LOCATION_LINE_HEIGHT = 35  # 已废弃，保留兼容性
+    MIN_SCREENSHOT_HEIGHT = 960  # 已废弃，保留兼容性
+    SCREENSHOT_WIDTH = 1200  # 已废弃，保留兼容性
+
 
 class TaskUtils:
     def __init__(self, config_utils: ConfigUtils, conn: sqlite3.Connection):
@@ -21,50 +38,93 @@ class TaskUtils:
         self.config_utils = config_utils
         self.conn = conn
         self.file_parser = FileParser()
+        self.output = os.path.join(self.config_utils.get_plugin_path(), "data")
 
+    async def close_browser(self):
+        """关闭 browser 实例"""
+        await self.image_utils.close_browser()
+
+    def _check_task_permission(self, task_data, event: AstrMessageEvent) -> str:
+        """检查任务权限"""
+        task_create_user_id = task_data[0][5]
+        task_create_user_name = task_data[0][4]
+        
+        if task_create_user_id != event.get_sender_id() and not event.is_admin():
+            return f"{task_create_user_name}才不是你的喵~"
+        return None
+    
+    def _execute_sql_with_transaction(self, operations: list) -> tuple[bool, str]:
+        """执行带事务的 SQL 操作
+        
+        Args:
+            operations: [(sql, params), ...] 格式的操作列表
+            
+        Returns:
+            (success, error_message)
+        """
+        try:
+            for sql, params in operations:
+                self.conn.execute(sql, params)
+            self.conn.commit()
+            return True, None
+        except Exception as e:
+            self.conn.rollback()
+            logger.error(f"SQL 操作失败: {e}")
+            return False, str(e)
+    
     def remove_task(self, name, event: AstrMessageEvent):
-
         task = self.get_task_by_name(name)
         if task["code"] != 200:
             return f"没找到{name}喵~"
 
-        if task["msg"][0][5] != event.get_sender_id() and not event.is_admin():
-            return f"{name}才不是你的喵~"
+        permission_error = self._check_task_permission(task["msg"], event)
+        if permission_error:
+            return permission_error
 
-        try:
-            # 删除任务
-            sql = "DELETE FROM task WHERE name = ?"
-            self.conn.execute(sql, (name,))
-            # 删除材料
-            sql = "DELETE FROM material WHERE task_id = ?"
-            self.conn.execute(sql, (task["msg"][0][0],))
-            self.conn.commit()
+        operations = [
+            ("DELETE FROM task WHERE name = ?", (name,)),
+            ("DELETE FROM material WHERE task_id = ?", (task["msg"][0][0],))
+        ]
+        
+        success, error = self._execute_sql_with_transaction(operations)
+        if success:
             return f"把{name}删掉了喵~"
-        except Exception as e:
-            self.conn.rollback()
-            return f"呜哇！报错了喵！\n{e}"
+        return f"呜哇！报错了喵！\n{error}"
 
     def commit_task(self, parts, event: AstrMessageEvent):
-        # name 2, materia 3,PersonInCharge 4, location 5
-        task = self.get_task_by_name(parts[2])
+        """提交任务材料（旧版兼容方法）"""
+        task_name = parts[2]
+        material_index = int(parts[3]) - 1
+        progress = int(parts[4])
+        location = parts[5]
+        
+        task = self.get_task_by_name(task_name)
         if task["code"] != 200:
-            return f"没找到{parts[2]}喵~"
-        materia_list = json.loads(task['msg'][0][5])
-        if len(materia_list) < int(parts[3]):
-            return f"没找到{parts[2]}的{parts[3]}号材料喵~"
+            return f"没找到{task_name}喵~"
+            
         try:
-            materia = materia_list[int(parts[3]) - 1]
-            materia["progress"] = int(parts[4])
-            materia["location"] = parts[5]
+            materia_list = json.loads(task['msg'][0][5])
+            if len(materia_list) <= material_index:
+                return f"没找到{task_name}的{parts[3]}号材料喵~"
+                
+            materia = materia_list[material_index]
+            materia["progress"] = progress
+            materia["location"] = location
             materia["PersonInCharge"] = event.message_obj.sender.nickname
-            materia_list[int(parts[3]) - 1] = materia
-            sql = "UPDATE task SET MaterialList = ? WHERE name = ?"
-            self.conn.execute(sql, (json.dumps(materia_list,ensure_ascii=False), parts[2],))
-            self.conn.commit()
-            return "收到啦！谢谢喵~"
-        except Exception as e:
+            materia_list[material_index] = materia
+            
+            operations = [
+                ("UPDATE task SET MaterialList = ? WHERE name = ?", 
+                 (json.dumps(materia_list, ensure_ascii=False), task_name))
+            ]
+            
+            success, error = self._execute_sql_with_transaction(operations)
+            if success:
+                return "收到啦！谢谢喵~"
             return f"呜哇！报错了喵！"
-
+        except (json.JSONDecodeError, ValueError, IndexError) as e:
+            logger.error(f"提交任务材料失败: {e}")
+            return f"呜哇！报错了喵！"
 
     def get_task_list(self):
         sql = "select name from task"
@@ -93,89 +153,77 @@ class TaskUtils:
         else:
             return {"code": 500, "msg": f"没找到材料喵~"}
 
-    def render(self, task, materia_list):
-        _task = {
+    async def render(self, task, materia_list):
+        """渲染任务材料列表图片
+        
+        Args:
+            task: 任务数据
+            materia_list: 材料列表
+            
+        Returns:
+            str: 生成的图片文件路径
+        """
+        # 准备任务数据
+        task_data = {
             "id": task[0][0],
             "name": task[0][1],
             "location": task[0][2],
             "dimension": task[0][3],
             "create_user": task[0][4],
-            "materia_list": process_materia_list(materia_list),
         }
-        templates = os.path.join(self.config_utils.get_plugin_path(), "template")
-        output = os.path.join(self.config_utils.get_plugin_path(), "data")
-        env = Environment(loader=FileSystemLoader(templates))
-        template = env.get_template("MateriaList.html")
-        if self.config_utils.enable_background_image:
-            background_image_path = self.image_utils.get_random_background_image()
-            if background_image_path:
-                web_background_path = background_image_path.replace('\\', '/')
-                background_image_style = f"background-image: url('{web_background_path}'); background-size: cover; background-position: center; background-repeat: no-repeat;"
-            else:
-                background_image_style = ""
-        else:
-            background_image_style = ""
-        font = self.config_utils.get_font()
-        html_content = template.render({"data": _task, "background_image_style": background_image_style, "font":font})
-        materia_list = _task['materia_list']
-        # bz为记录只有材料所在位置只有一个值或没有值的数量，lo_height为记录材料所在位置多于一个值所占的高度
-        bz = lo_height = 0
-        for materia in materia_list:
-            location = materia["location"]
-            if not location:
-                bz+=1
-                continue
-            location_json = json.loads(location)
-            if len(location_json) == 1:
-                bz+=1
-                continue
-            lo_height = lo_height + (len(location_json)+1) * 21
-
-        hti = Html2Image(output_path=output, custom_flags=['--no-sandbox', '--disable-dev-shm-usage'], browser='chrome')
-        base_height = 134
-        content_height = bz * 47
-        # 加1是防止整入是丢掉小数点后面的数字导致截图不全
-        height = max(600, int(base_height + content_height + lo_height)+1)
-        hti.screenshot(html_str=html_content, save_as="task.png", size=(650, height))
-        path = os.path.join(output, "task.png")
-        path = self.image_utils.image_fix(path)
+        
+        # 使用 image_utils 生成图片
+        path = await self.image_utils.generate_materia_image(
+            task_data=task_data,
+            materia_list=materia_list,
+            filename='task.png'
+        )
+        
         return path
 
     def set_task(self, location, dimension, original_name, name, event):
+        """修改任务信息"""
         task = self.get_task_by_name(original_name)
         if task["code"] != 200:
             return f"没有{original_name}喵~"
 
-        # 非创建者并且非管理员不可修改
-        if task["msg"][0][4] != event.message_obj.sender.nickname and not event.is_admin():
-            return f"{original_name}才不是你的喵~"
+        permission_error = self._check_task_permission(task["msg"], event)
+        if permission_error:
+            return permission_error
 
         # 校验新名字是否存在
         new_task = self.get_task_by_name(name)
         if new_task["code"] == 200:
             return f"已经有{name}了喵~"
 
-        sql = "UPDATE task SET name = ?,location = ?,dimension = ? WHERE name = ?"
-        self.conn.execute(sql, (name, location, dimension, original_name))
-        return "修改成功喵~"
+        operations = [
+            ("UPDATE task SET name = ?,location = ?,dimension = ? WHERE name = ?",
+             (name, location, dimension, original_name))
+        ]
+        
+        success, error = self._execute_sql_with_transaction(operations)
+        if success:
+            return "修改成功喵~"
+        return f"呜哇！报错了喵！\n{error}"
 
     def download_file(self, url, file_path):
+        """下载文件"""
         try:
-            print(f"{url}\n{file_path}")
-            # 发送GET请求
-            response = httpx.get(url)
-            # 检查请求是否成功
+            response = httpx.get(url, timeout=30)
             response.raise_for_status()
-            # 确保目标目录存在
+            
             os.makedirs(os.path.dirname(file_path), exist_ok=True)
-            # 将内容写入文件
+            
             with open(file_path, 'wb') as f:
                 f.write(response.content)
-                return True
-        except:
+            
+            return True
+        except (httpx.RequestError, httpx.HTTPStatusError, IOError) as e:
+            logger.error(f"文件下载失败: {url}, 错误: {e}")
             return False
 
     def task_material(self, url, file_name, session_id: str, task_temp: TTLCache):
+        """处理材料文件上传"""
         try:
             # 获取任务信息
             task_temp_info = task_temp[session_id]
@@ -199,12 +247,15 @@ class TaskUtils:
             task_temp.pop(session_id)
             return "上传材料列表成功喵~"
             
+        except KeyError:
+            return "会话已过期喵~"
         except Exception as e:
             self.conn.rollback()
             logger.error(f"task_material 处理失败: {e}")
             return f"报错了喵~ \n {e}"
     
     def _create_task(self, task_temp_info: dict) -> int:
+        """创建任务记录"""
         task_data = (
             task_temp_info["name"],
             task_temp_info["location"], 
@@ -218,14 +269,13 @@ class TaskUtils:
         return cursor.lastrowid
     
     def _process_material_file(self, url: str, file_name: str, task_id: int) -> list:
-        # 下载文件
+        """处理材料文件"""
         file_path = os.path.join(self.config_utils.get_plugin_path(), "data", file_name)
         if not self.download_file(url, file_path):
             logger.error("文件下载失败")
             return None
         
         try:
-            # 解析文件
             parse_result = self.file_parser.parse(file_path, int(task_id))
             if parse_result["code"] != 200:
                 logger.error(parse_result['msg'])
@@ -238,75 +288,77 @@ class TaskUtils:
                 os.remove(file_path)
     
     def _insert_material_data(self, material_list: list):
+        """插入材料数据"""
         sql = "INSERT INTO material(name,name_id,total, recipient,commit_count,number,task_id) VALUES (?, ?, ?, ?, ?, ?, ?)"
         self.conn.executemany(sql, material_list)
 
     def update_material(self, task_name, material_number, event: AstrMessageEvent):
-        # 获取任务id
+        """领取材料"""
         task_res = self.get_task_by_name(task_name)
-        if (task_res['code'] != 200):
+        if task_res['code'] != 200:
             return f"没找到{task_name}喵~"
+            
         task = task_res["msg"]
         sql = "SELECT * FROM material WHERE task_id = ? and number = ?"
         sql_res = self.conn.execute(sql, (task[0][0], material_number)).fetchall()
-        if sql_res:
-            try:
-                sql = "UPDATE material SET recipient = ? WHERE id = ?"
-                self.conn.execute(sql, (event.get_sender_name(), sql_res[0][0]))
-                self.conn.commit()
-                return "领取成功喵~"
-            except Exception as e:
-                self.conn.rollback()
-                return f"呜哇！出错了喵！\n{e}"
-        else:
+        
+        if not sql_res:
             return f"没找到{task_name}里面的{material_number}号喵~"
+            
+        operations = [
+            ("UPDATE material SET recipient = ? WHERE id = ?",
+             (event.get_sender_name(), sql_res[0][0]))
+        ]
+        
+        success, error = self._execute_sql_with_transaction(operations)
+        if success:
+            return "领取成功喵~"
+        return f"呜哇！出错了喵！\n{error}"
 
     def commit_material(self, task_name, material_number, location, count, group, box):
-        # 获取任务id
+        """提交材料"""
         task_res = self.get_task_by_name(task_name)
-        if (task_res['code'] != 200):
+        if task_res['code'] != 200:
             return f"没找到{task_name}喵~"
+            
         task = task_res["msg"]
         sql = "SELECT * FROM material WHERE task_id = ? and number = ?"
         sql_res = self.conn.execute(sql, (task[0][0], material_number)).fetchall()
-        if sql_res:
-            try:
-                commited_count = int(sql_res[0][5])
-                total = int(sql_res[0][3])
-                if commited_count >= total:
-                    return f"{sql_res[0][1]}已经完成了喵~"
-                sql = "UPDATE material SET commit_count = ?, location = ? WHERE id = ?"
-                commit_count = commited_count + count + (group * 64) + (box * 1728)
-                sql_location = sql_res[0][8]
-                if sql_location is None:
-                    locations = [location]
-                else:
-                    locations = json.loads(sql_res[0][8])
-                    locations.append(location)
-                self.conn.execute(sql, (commit_count, json.dumps(locations), sql_res[0][0]))
-                self.conn.commit()
-                return "提交成功！谢谢喵~"
-            except Exception as e:
-                self.conn.rollback()
-                return f"呜哇！出错了喵！\n{e}"
-        else:
+        
+        if not sql_res:
             return f"没找到{task_name}里面的{material_number}号喵~"
-
-
-def process_materia_list(materia_list: list) -> list:
-    def calculate_remaining_box(total, commit_count):
-        return math.floor((total - commit_count) / 1728)
-    def calculate_remaining_group(total, commit_count):
-        return round(((total - commit_count) % 1728) / 64, 2)
-    res = []
-    for materia in materia_list:
-        res.append({
-            "number": materia[6], # 编号
-            "name": materia[1], # 材料名字
-            "total": materia[3], # 所需总数
-            "remaining_box": calculate_remaining_box(int(materia[3]), int(materia[5])), # 还差 - 盒
-            "remaining_group": calculate_remaining_group(int(materia[3]), int(materia[5])), # 还差 - 组
-            "recipient": materia[4], # 负责人
-            "location": materia[8] if materia[8] is not None else '', # 所在位置
-        })
-    return res
+            
+        try:
+            material = sql_res[0]
+            commited_count = int(material[5])
+            total = int(material[3])
+            material_name = material[1]
+            
+            if commited_count >= total:
+                return f"{material_name}已经完成了喵~"
+                
+            # 计算总提交数量
+            commit_count = commited_count + count + (group * MaterialConstants.ITEMS_PER_STACK) + (box * MaterialConstants.ITEMS_PER_BOX)
+            
+            # 更新位置列表
+            sql_location = material[8]
+            if sql_location is None:
+                locations = [location]
+            else:
+                locations = json.loads(sql_location)
+                locations.append(location)
+            
+            operations = [
+                ("UPDATE material SET commit_count = ?, location = ? WHERE id = ?",
+                 (commit_count, json.dumps(locations, ensure_ascii=False), material[0]))
+            ]
+            
+            success, error = self._execute_sql_with_transaction(operations)
+            if success:
+                return "提交成功！谢谢喵~"
+            return f"呜哇！出错了喵！\n{error}"
+            
+        except (json.JSONDecodeError, ValueError, KeyError) as e:
+            logger.error(f"提交材料失败: {e}")
+            self.conn.rollback()
+            return f"呜哇！出错了喵！\n{e}"

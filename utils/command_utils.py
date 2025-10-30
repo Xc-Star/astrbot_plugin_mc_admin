@@ -411,7 +411,7 @@ class CommandUtils:
             if task["code"] != 200:
                 return {"type":"text","msg":f"没找到{task_name}喵~"}
             materia = self.task_utils.get_material_list_by_task_id(task['msg'][0][0])
-            url = self.task_utils.render(task["msg"], materia['msg'])
+            url = await self.task_utils.render(task["msg"], materia['msg'])
             return {"type":"image", "msg":url}
 
         return {"type": "text", "msg": self.message.get_task_help_message()}

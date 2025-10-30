@@ -1,3 +1,5 @@
+import asyncio
+import sys
 from astrbot.api.event import filter, AstrMessageEvent, MessageEventResult
 from astrbot.api.star import Context, Star, register
 from astrbot.api import logger
@@ -26,6 +28,54 @@ class McAdminPlugin(Star):
 
     async def initialize(self):
         """可选择实现异步的插件初始化方法，当实例化该插件类之后会自动调用该方法。"""
+        # 检查并安装 Playwright Chromium
+        await self._ensure_playwright_installed()
+    
+    async def _ensure_playwright_installed(self):
+        """确保 Playwright Chromium 已安装
+        
+        该方法会检查并自动安装 Playwright Chromium 浏览器。
+        如果已安装，会快速跳过；如果未安装，会自动执行安装命令。
+        """
+        logger.info("检查 Playwright Chromium 是否已安装...")
+        
+        # 直接执行 playwright install chromium 命令
+        # Playwright 会检查是否已安装，如果已安装会立即返回
+        logger.info("正在检查并安装 Playwright Chromium...")
+        logger.info("注意：如果未安装，首次安装可能需要几分钟时间，请耐心等待...")
+        
+        try:
+            # 执行 playwright install chromium 命令
+            process = await asyncio.create_subprocess_exec(
+                sys.executable, "-m", "playwright", "install", "chromium",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.STDOUT,
+            )
+            
+            assert process.stdout is not None
+            installed = False
+            async for line in process.stdout:
+                output = line.decode().strip()
+                logger.info(output)
+                # 检查是否显示已安装的消息
+                if "is already installed" in output.lower() or "已经安装" in output:
+                    installed = True
+            
+            await process.wait()
+            
+            if process.returncode != 0:
+                logger.error(f"安装 Playwright Chromium 失败，错误码: {process.returncode}")
+                logger.error("请手动执行: playwright install chromium")
+            else:
+                if installed:
+                    logger.info("Playwright Chromium 已安装")
+                else:
+                    logger.info("Playwright Chromium 安装成功")
+        except FileNotFoundError:
+            logger.error("未找到 playwright 命令，请先安装: pip install playwright")
+        except Exception as install_error:
+            logger.error(f"安装 Playwright Chromium 时出错: {install_error}")
+            logger.error("请手动执行: playwright install chromium")
 
 
     @filter.command("test")
@@ -81,6 +131,8 @@ class McAdminPlugin(Star):
 
     async def terminate(self):
         """可选择实现异步的插件销毁方法，当插件被卸载/停用时会调用。"""
+        # 关闭 browser 实例（使用 ImageUtils 的，TaskUtils 只是转发）
+        await self.command_utils.image_utils.close_browser()
         # 关闭Rcon连接池
         close_rcon_pool()
         # 关闭数据库连接
