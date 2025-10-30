@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minecraft 材料列表</title>
+    <style>
+        @font-face {
+          font-family: 'Jiying';
+          src: url("{{ font }}") format('truetype');
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Jiying', sans-serif;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', 'PingFang SC', 'Helvetica Neue', Arial, sans-serif;
+            padding: 32px;
+            color: #333;
+            margin: 0;
+            position: relative;
+            overflow: hidden;
+            min-height: 100vh;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -2;
+            {{ background_image_style | safe }}
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.2);
+            z-index: -1;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .title {
+            text-align: center;
+            color: white;
+            font-size: 45px;
+            font-weight: bold;
+            margin-bottom: 32px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3), 0 0 8px rgba(0,0,0,0.5);
+        }
+
+        .material-title {
+            font-size: 35px;
+            font-weight: bold;
+            color: white;
+            margin-bottom: 26px;
+            text-align: center;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3), 0 0 6px rgba(0,0,0,0.5);
+        }
+
+        .material-info {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(8px);
+            border-radius: 12px;
+            padding: 13px;
+            margin-bottom: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 22px;
+            gap: 32px;
+        }
+
+        .info-label {
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.9);
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.3), 0 0 4px rgba(0,0,0,0.4);
+        }
+
+        .info-value {
+            color: white;
+            font-weight: 500;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.3), 0 0 4px rgba(0,0,0,0.4);
+        }
+
+        .materials-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(8px);
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        .materials-table th {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            font-weight: bold;
+            padding: 19px 13px;
+            text-align: center;
+            font-size: 22px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3), 0 0 6px rgba(0,0,0,0.6);
+        }
+
+        .materials-table th:nth-child(2) {
+            text-align: left;
+            padding-left: 19px;
+        }
+
+        .materials-table td {
+            padding: 16px 13px;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 21px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            text-shadow: 2px 2px 3px rgba(0,0,0,0.3), 0 0 5px rgba(0,0,0,0.5);
+        }
+
+        .materials-table td:nth-child(2) {
+            text-align: left;
+            align-items: center;
+            gap: 13px;
+            justify-content: flex-start;
+            padding-left: 19px;
+        }
+
+        .materials-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .icon-placeholder {
+            width: 32px;
+            height: 32px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            display: inline-block;
+        }
+
+        .status-completed {
+            color: #4ade80;
+            font-weight: 600;
+            text-shadow: 2px 2px 3px rgba(0,0,0,0.3), 0 0 5px rgba(0,0,0,0.5);
+        }
+
+        .status-not-started {
+            color: #ef4444;
+            font-weight: 600;
+            text-shadow: 2px 2px 3px rgba(0,0,0,0.3), 0 0 5px rgba(0,0,0,0.5);
+        }
+
+        /* 隐藏滚动条样式 */
+        ::-webkit-scrollbar {
+            width: 0px;
+            height: 0px;
+        }
+
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+    </style>
+</head>
+<body class="bg">
+    <div class="container">
+        <div class="title">{{ data.name }} 材料列表</div>
+
+        <div class="material-card">
+
+            <div class="material-info">
+                <div class="info-row">
+                    <div>
+                        <span class="info-label">上传者：</span>
+                        <span class="info-value">{{ data.create_user }}</span>
+                    </div>
+                    <div>
+                        <span class="info-label">所在纬度：</span>
+                        <span class="info-value">
+                            {% if data.dimension == '0' %}
+                                主世界
+                            {% elif data.dimension == '1' %}
+                                地狱
+                            {% else %}
+                                末地
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div>
+                        <span class="info-label">坐标：</span>
+                        <span class="info-value">{{ data.location }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <table class="materials-table">
+                <thead>
+                    <tr>
+                        <th>编号</th>
+                        <th>材料</th>
+                        <th>所需总数</th>
+                        <th>还需/盒</th>
+                        <th>还需/组</th>
+                        <th>备货人</th>
+                        <th>所在位置/假人</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for materia in data.materia_list %}
+                        <tr>
+                            <td>{{ materia.number }}</td>
+<!--                            <td><i class="icon-placeholder"></i>{{ materia.name }}</td>-->
+                            <td>{{ materia.name }}</td>
+                            <td>{{ materia.total }}</td>
+                            <td>{{ materia.remaining_box }}</td>
+                            <td>{{ materia.remaining_group }}</td>
+<!--                            <td><span class="{% if materia.progress == '是'%}status-completed{% else %}status-not-started{% endif %}">{{ materia.progress }}</span></td>-->
+                            <td>{% if materia.recipient == "" %}-{% else %}{{ materia.recipient }}{% endif %}</td>
+                            <td>
+                                {% if materia.location == "" %}
+                                    -
+                                {% else %}
+                                    {{ materia.location | replace('"', '') | replace('[', '') | replace(']', '') | replace(',', '<br>') }}
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</body>
+</html>

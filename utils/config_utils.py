@@ -1,5 +1,8 @@
+import base64
 import os
 import json
+import pathlib
+
 from astrbot.core import AstrBotConfig
 from astrbot.api import logger
 
@@ -55,17 +58,6 @@ class ConfigUtils:
         """
         return self.bot_prefix
 
-    def get_loc_list(self):
-        path = os.path.join(self.get_plugin_path(), 'data', 'loc.json')
-        with open(path, 'r', encoding='utf-8') as f:
-            return json.load(f)['server_loc']
-
-    def set_loc_list(self, list: list):
-        path = os.path.join(self.get_plugin_path(), 'data', 'loc.json')
-        json_str = {'server_loc': list}
-        with open(path, 'w', encoding='utf-8') as f:
-            json.dump(json_str, f, ensure_ascii=False, indent=4)
-
     def get_plugin_path(self):
         """获取当前插件的路径
 
@@ -76,3 +68,11 @@ class ConfigUtils:
         current_file_path = os.path.abspath(__file__)
         # 获取插件的根目录（向上两级目录：utils目录 -> 插件根目录）
         return os.path.dirname(os.path.dirname(current_file_path))
+
+
+    def get_font(self):
+        plugin_path = self.get_plugin_path()
+        font_path = os.path.join(plugin_path, 'template', 'font', 'jiyinghuipianheyuan.ttf')
+        b64 = base64.b64encode(pathlib.Path(font_path).read_bytes()).decode()
+        font = f"data:font/ttf;base64,{b64}"
+        return font
