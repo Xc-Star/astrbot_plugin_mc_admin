@@ -57,12 +57,7 @@ class CommandUtils:
     """Minecraft 服务器命令工具类"""
     
     def __init__(self, config: AstrBotConfig, conn: sqlite3.Connection):
-        """初始化命令工具
-        
-        Args:
-            config: AstrBot 配置对象
-            conn: 数据库连接对象
-        """
+        """初始化命令工具"""
         # 工具类初始化
         self.config_utils = ConfigUtils(config)
         self.message = MessageUtils()
@@ -79,15 +74,7 @@ class CommandUtils:
 
     # ==================== MC 命令处理 ====================
     async def mc(self, msg: str, event: AstrMessageEvent) -> str:
-        """处理 MC 相关命令
-        
-        Args:
-            msg: 命令消息
-            event: 消息事件对象
-            
-        Returns:
-            处理结果消息
-        """
+        """处理 MC 相关命令"""
         # 优先处理白名单命令
         if msg.startswith('mc wl'):
             parts = msg.split()
@@ -111,11 +98,7 @@ class CommandUtils:
 
     # ==================== 玩家列表 ====================
     async def list_players(self) -> str:
-        """获取所有服务器的玩家列表并生成图片
-        
-        Returns:
-            生成的图片路径
-        """
+        """获取所有服务器的玩家列表并生成图片"""
         bot_prefix = self.config_utils.get_bot_prefix()
 
         async def process_server(server: Dict) -> Optional[Tuple[str, Dict[str, List[str]]]]:
@@ -155,14 +138,7 @@ class CommandUtils:
 
     # ==================== 工具方法 ====================
     def validate_coordinates(self, coordinates: str) -> Tuple[bool, str]:
-        """验证 Minecraft 坐标的有效性
-        
-        Args:
-            coordinates: 坐标字符串，格式为 "x y z"
-            
-        Returns:
-            (是否有效, 错误消息)
-        """
+        """验证 Minecraft 坐标的有效性"""
         try:
             coord_parts = coordinates.split()
             if len(coord_parts) != 3:
@@ -182,15 +158,7 @@ class CommandUtils:
 
     # ==================== 白名单管理 ====================
     async def wl(self, msg: str, event: AstrMessageEvent) -> str:
-        """处理白名单命令
-        
-        Args:
-            msg: 命令消息
-            event: 消息事件对象
-            
-        Returns:
-            处理结果消息
-        """
+        """处理白名单命令"""
         # 权限检查
         if not event.is_admin():
             return self.PERMISSION_DENIED
@@ -530,15 +498,7 @@ class CommandUtils:
 
     # ==================== 材料文件处理 ====================
     async def material(self, task_temp: TTLCache, event: AstrMessageEvent) -> Optional[str]:
-        """处理任务材料文件上传
-        
-        Args:
-            task_temp: 临时任务缓存
-            event: 消息事件对象
-            
-        Returns:
-            处理结果消息，None 表示非文件消息或处理失败
-        """
+        """处理任务材料文件上传"""
         try:
             # 尝试解析事件中的原始消息
             raw_message = event.message_obj.raw_message
@@ -587,9 +547,5 @@ class CommandUtils:
 
     # ==================== 其他工具方法 ====================
     def get_image(self) -> str:
-        """获取最后生成的图片路径
-        
-        Returns:
-            图片路径
-        """
+        """获取最后生成的图片路径"""
         return self.image_utils.get_last_image()

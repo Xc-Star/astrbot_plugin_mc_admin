@@ -1,6 +1,6 @@
-import base64
 import os
-import pathlib
+from pathlib import Path
+from urllib.request import pathname2url
 
 from astrbot.core import AstrBotConfig
 
@@ -45,15 +45,11 @@ class ConfigUtils:
             self.background_image_path = config.get('background_image_path')
 
     def get_server_list(self):
-        """
-        获取服务器列表
-        """
+        """获取服务器列表"""
         return self.server_list
 
     def get_bot_prefix(self):
-        """
-        获取机器人前缀
-        """
+        """获取假人前缀"""
         return self.bot_prefix
 
     def get_plugin_path(self):
@@ -69,8 +65,27 @@ class ConfigUtils:
 
 
     def get_font(self):
+        """获取字体URL（跨平台支持 Windows/Linux/Mac）
+        
+        Returns:
+            str: 字体文件的 file:// URL
+            
+        支持平台：
+            - Windows: 转换为 file:///C:/path/to/font.ttf
+            - Linux/Mac: 转换为 file:///path/to/font.ttf
+        """
         plugin_path = self.get_plugin_path()
         font_path = os.path.join(plugin_path, 'template', 'font', 'jiyinghuipianheyuan.ttf')
-        b64 = base64.b64encode(pathlib.Path(font_path).read_bytes()).decode()
-        font = f"data:font/ttf;base64,{b64}"
-        return font
+        
+        # 转换为绝对路径
+        abs_path = os.path.abspath(font_path)
+        # 使用 Path 对象确保跨平台兼容
+        path_obj = Path(abs_path)
+        # 转换为 POSIX 风格路径（使用正斜杠）
+        posix_path = path_obj.as_posix()
+        # 使用 pathname2url 进行 URL 编码（处理特殊字符和空格）
+        url_path = pathname2url(posix_path)
+        # 构建 file:// URL
+        file_url = f"file:///{url_path}"
+        
+        return file_url

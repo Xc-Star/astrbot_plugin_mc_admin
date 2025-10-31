@@ -5,11 +5,13 @@
 ## 插件信息
 - 插件名称：astrbot_plugin_mc_admin
 - 作者：Xc_Star
-- 版本：0.4.0
+- 版本：0.4.1
 - 仓库地址：[https://github.com/Xc-Star/astrbot_plugin_mc_admin](https://github.com/Xc-Star/astrbot_plugin_mc_admin)
 
 ## 用前提醒
 生成在线列表和项目材料的图片用到了**playwright**库，他会在你安装、初始化插件的时候检测你的电脑是否安装过Playwright Chromium。如果没有，第一次安装会自动下载，下载时长取决于你的网络！
+
+并且他所需的依赖库比较大，下载也需要一些时间
 
 如果下载成功后插件管理没有显示当前插件，可以尝试重启Astrbot
 

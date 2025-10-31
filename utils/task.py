@@ -44,14 +44,7 @@ class TaskUtils:
         return None
     
     def _execute_sql_with_transaction(self, operations: list) -> tuple[bool, str]:
-        """执行带事务的 SQL 操作
-        
-        Args:
-            operations: [(sql, params), ...] 格式的操作列表
-            
-        Returns:
-            (success, error_message)
-        """
+        """执行带事务的 SQL 操作"""
         try:
             for sql, params in operations:
                 self.conn.execute(sql, params)
@@ -145,11 +138,7 @@ class TaskUtils:
 
     async def render(self, task, materia_list):
         """渲染任务材料列表图片
-        
-        Args:
-            task: 任务数据
-            materia_list: 材料列表
-            
+
         Returns:
             str: 生成的图片文件路径
         """

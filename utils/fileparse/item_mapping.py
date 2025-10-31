@@ -8,12 +8,7 @@ class ItemMapping:
     """物品ID与名字映射工具类"""
     
     def __init__(self, mapping_file_path: str = None):
-        """
-        初始化物品映射
-        
-        Args:
-            mapping_file_path: 映射文件路径，默认为插件data目录下的item_mapping.json
-        """
+        """初始化物品映射"""
         if mapping_file_path is None:
             # 计算插件根目录下的 data/item_mapping.json
             # 当前文件位于: <plugin_root>/utils/fileparse/item_mapping.py
@@ -52,66 +47,27 @@ class ItemMapping:
         self._load_mapping()
     
     def get_item_name(self, item_id: str) -> Optional[str]:
-        """
-        根据物品ID获取物品名字
-        
-        Args:
-            item_id: 物品ID，如 "minecraft:diamond"
-            
-        Returns:
-            物品名字，如 "钻石"，如果未找到返回None
-        """
+        """根据物品ID获取物品名字"""
         return self._mapping_data.get(item_id)
     
     def get_item_id(self, item_name: str) -> Optional[str]:
-        """
-        根据物品名字获取物品ID
-        
-        Args:
-            item_name: 物品名字，如 "钻石"
-            
-        Returns:
-            物品ID，如 "minecraft:diamond"，如果未找到返回None
-        """
+        """根据物品名字获取物品ID"""
         return self._reverse_mapping.get(item_name)
     
     def get_all_items(self) -> Dict[str, str]:
-        """
-        获取所有物品映射
-        
-        Returns:
-            字典，键为物品ID，值为物品名字
-        """
+        """获取所有物品映射"""
         return self._mapping_data.copy()
     
     def get_all_item_names(self) -> list:
-        """
-        获取所有物品名字列表
-        
-        Returns:
-            物品名字列表
-        """
+        """获取所有物品名字列表"""
         return list(self._reverse_mapping.keys())
     
     def get_all_item_ids(self) -> list:
-        """
-        获取所有物品ID列表
-        
-        Returns:
-            物品ID列表
-        """
+        """获取所有物品ID列表"""
         return list(self._mapping_data.keys())
     
     def search_items(self, keyword: str) -> Dict[str, str]:
-        """
-        搜索包含关键词的物品
-        
-        Args:
-            keyword: 搜索关键词
-            
-        Returns:
-            匹配的物品映射字典
-        """
+        """搜索包含关键词的物品"""
         keyword = keyword.lower()
         results = {}
         
@@ -123,16 +79,7 @@ class ItemMapping:
         return results
     
     def add_item(self, item_id: str, item_name: str) -> bool:
-        """
-        添加新的物品映射
-        
-        Args:
-            item_id: 物品ID
-            item_name: 物品名字
-            
-        Returns:
-            是否添加成功
-        """
+        """添加新的物品映射"""
         try:
             self._mapping_data[item_id] = item_name
             self._reverse_mapping[item_name] = item_id
@@ -144,16 +91,7 @@ class ItemMapping:
             return False
     
     def remove_item(self, item_id: str = None, item_name: str = None) -> bool:
-        """
-        删除物品映射
-        
-        Args:
-            item_id: 物品ID（优先使用）
-            item_name: 物品名字
-            
-        Returns:
-            是否删除成功
-        """
+        """删除物品映射"""
         try:
             if item_id and item_id in self._mapping_data:
                 item_name = self._mapping_data[item_id]
@@ -195,12 +133,7 @@ class ItemMapping:
             logger.error(f"保存物品映射文件失败: {e}")
     
     def get_mapping_info(self) -> Dict[str, any]:
-        """
-        获取映射信息统计
-        
-        Returns:
-            包含统计信息的字典
-        """
+        """获取映射信息统计"""
         return {
             "total_items": len(self._mapping_data),
             "file_path": self.mapping_file_path,

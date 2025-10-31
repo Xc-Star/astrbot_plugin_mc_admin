@@ -9,22 +9,11 @@ class LocUtils:
     """位置管理工具类，使用数据库存储位置数据"""
     
     def __init__(self, conn: sqlite3.Connection):
-        """初始化位置管理工具
-        
-        Args:
-            conn: 数据库连接对象
-        """
+        """初始化位置管理工具"""
         self.conn = conn
 
     def add_loc(self, loc: Loc) -> str:
-        """添加新位置
-        
-        Args:
-            loc: 位置对象
-            
-        Returns:
-            操作结果消息
-        """
+        """添加新位置"""
         try:
             # 检查是否已存在同名位置
             if self.get_loc_by_name(loc.name) is not None:
@@ -47,14 +36,7 @@ class LocUtils:
             return f"呜哇！添加失败了喵！\n{e}"
 
     def remove_loc(self, name: str) -> str:
-        """删除位置
-        
-        Args:
-            name: 位置名称
-            
-        Returns:
-            操作结果消息
-        """
+        """删除位置"""
         try:
             # 检查位置是否存在
             if self.get_loc_by_name(name) is None:
@@ -72,14 +54,7 @@ class LocUtils:
             return f"呜哇！删除失败了喵！\n{e}"
     
     def get_loc_by_name(self, name: str) -> Optional[Loc]:
-        """根据名称获取位置
-        
-        Args:
-            name: 位置名称
-            
-        Returns:
-            位置对象，如果不存在则返回 None
-        """
+        """根据名称获取位置"""
         try:
             sql = "SELECT id, name, overworld, nether, end FROM location WHERE name = ?"
             result = self.conn.execute(sql, (name,)).fetchone()
@@ -98,11 +73,7 @@ class LocUtils:
             return None
 
     def get_all_locations(self) -> List[Loc]:
-        """获取所有位置列表
-        
-        Returns:
-            位置对象列表
-        """
+        """获取所有位置列表"""
         try:
             sql = "SELECT id, name, overworld, nether, end FROM location ORDER BY name"
             results = self.conn.execute(sql).fetchall()
@@ -121,11 +92,7 @@ class LocUtils:
             return []
 
     def list_loc(self) -> str:
-        """列出所有位置名称
-        
-        Returns:
-            格式化的位置列表字符串
-        """
+        """列出所有位置名称"""
         locations = self.get_all_locations()
         
         if not locations:
@@ -137,14 +104,7 @@ class LocUtils:
         return result.strip()
 
     def set_loc(self, loc: Loc) -> str:
-        """更新位置信息
-        
-        Args:
-            loc: 位置对象
-            
-        Returns:
-            操作结果消息
-        """
+        """更新位置信息"""
         try:
             # 检查位置是否存在
             if self.get_loc_by_name(loc.name) is None:

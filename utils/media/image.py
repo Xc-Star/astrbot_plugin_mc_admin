@@ -1,9 +1,11 @@
+import time
 from pathlib import Path
 import os
 import json
 import random
-import base64
 import math
+from urllib.parse import urljoin
+from urllib.request import pathname2url
 from jinja2 import FileSystemLoader, Environment
 from ..config_utils import ConfigUtils
 from .browser import BrowserManager
@@ -35,7 +37,28 @@ ITEMS_PER_BOX = 1728  # 每箱物品数量 (64 * 27)
 SUPPORTED_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.bmp']
 
 # 默认背景颜色
-DEFAULT_BACKGROUND_COLOR = "#f0f0f0"
+DEFAULT_BACKGROUND_COLOR = "#2B2D30"
+
+
+# ==================== 工具函数 ====================
+
+def path_to_file_url(file_path: str) -> str:
+    """将文件路径转换为 file:// URL（跨平台支持）
+        
+    支持平台：
+        - Windows: C:\\path\\to\\file -> file:///C:/path/to/file
+        - Linux/Mac: /path/to/file -> file:///path/to/file
+    """
+    # 转换为绝对路径
+    abs_path = os.path.abspath(file_path)
+    # 使用 Path 对象确保跨平台兼容
+    path_obj = Path(abs_path)
+    # 转换为 POSIX 风格路径（使用正斜杠）
+    posix_path = path_obj.as_posix()
+    # 使用 pathname2url 进行 URL 编码（处理特殊字符和空格）
+    url_path = pathname2url(posix_path)
+    # 构建 file:// URL
+    return f"file:///{url_path}"
 
 
 # ==================== 类定义 ====================
@@ -71,10 +94,7 @@ class ImageUtils:
     
     async def generate_list_image(self, servers_data=None):
         """生成服务器列表图片
-        
-        Args:
-            servers_data: 服务器数据字典
-            
+
         Returns:
             str: 生成的图片文件路径
         """
@@ -94,41 +114,29 @@ class ImageUtils:
     
     async def generate_materia_image(self, task_data: dict, materia_list: list, filename: str = 'task.png') -> str:
         """生成材料列表图片
-        
-        Args:
-            task_data: 任务数据字典
-            materia_list: 处理后的材料列表
-            filename: 保存的文件名
-            
+
         Returns:
             str: 生成的图片文件路径
         """
         # 准备数据
         task_data_with_materia = task_data.copy()
         task_data_with_materia['materia_list'] = self._process_materia_list(materia_list)
-        
+
         # 计算截图高度
         height = self._calculate_materia_screenshot_height(task_data_with_materia['materia_list'])
-        
+
         # 渲染 HTML 模板
         html_content = self.render_materia_template(task_data_with_materia)
-        
+
         # 截图
         path = await self._take_screenshot(html_content, height, filename)
-        
+
         return path
     
     # ==================== 模板渲染方法 ====================
     
     def render_list_template(self, servers_data=None):
-        """渲染HTML模板
-        
-        Args:
-            servers_data: 服务器数据
-            
-        Returns:
-            str: 渲染后的 HTML 内容
-        """
+        """渲染HTML模板"""
         try:
             # 读取并缓存模板内容
             html_content = self._get_template_content()
@@ -163,15 +171,7 @@ class ImageUtils:
         return html_content.replace('{{ font }}', font)
     
     def _inject_servers_data(self, html_content: str, servers_data: dict) -> str:
-        """将服务器数据注入到HTML中
-        
-        Args:
-            html_content: HTML 内容
-            servers_data: 服务器数据字典
-            
-        Returns:
-            str: 注入后的 HTML 内容
-        """
+        """将服务器数据注入到HTML中"""
         # 参数验证和默认值处理
         if servers_data is not None and not isinstance(servers_data, dict):
             logger.warning("服务器数据格式不正确，应为字典类型")
@@ -189,14 +189,7 @@ class ImageUtils:
             return html_content.replace('{{ servers_data | safe }}', '{}')
     
     def _inject_background_style(self, html_content: str) -> str:
-        """将背景样式注入到HTML中（使用 Base64 编码）
-        
-        Args:
-            html_content: HTML 内容
-            
-        Returns:
-            str: 注入后的 HTML 内容
-        """
+        """将背景样式注入到HTML中"""
         try:
             # 未启用背景图片或未找到图片时使用默认背景
             if not self.enable_background_image:
@@ -208,7 +201,7 @@ class ImageUtils:
                 logger.debug("未找到可用的背景图片，使用默认渐变背景")
                 return self._replace_background_style(html_content, self._get_default_background())
             
-            # 尝试生成 Base64 背景样式
+            # 生成本地文件路径的背景样式（file:// URL）
             background_style = self._create_background_style_from_file(background_image_path)
             if background_style:
                 return self._replace_background_style(html_content, background_style)
@@ -228,27 +221,15 @@ class ImageUtils:
         return html_content.replace('{{ background_image_style }}', background_style)
     
     def _create_background_style_from_file(self, image_path: str) -> str:
-        """从文件创建 Base64 背景样式
-        
-        Args:
-            image_path: 图片文件路径
-            
-        Returns:
-            str: CSS 背景样式字符串，失败返回空字符串
-        """
+        """从文件创建背景样式（跨平台支持）"""
         try:
-            with open(image_path, 'rb') as img_file:
-                img_data = img_file.read()
-                img_base64 = base64.b64encode(img_data).decode('utf-8')
-                
-                # 确定 MIME 类型
-                file_ext = os.path.splitext(image_path)[1].lower()
-                mime_type = 'image/png' if file_ext == '.png' else 'image/jpeg'
-                
-                return (f"background-image: url('data:{mime_type};base64,{img_base64}'); "
-                       "background-size: cover; background-position: center; background-repeat: no-repeat;")
+            # 使用跨平台路径转换函数
+            file_url = path_to_file_url(image_path)
+            
+            return (f"background-image: url('{file_url}'); "
+                   "background-size: cover; background-position: center; background-repeat: no-repeat;")
         except Exception as e:
-            logger.error(f"读取背景图片失败: {e}")
+            logger.error(f"创建背景样式失败: {e}")
             return ""
     
     def get_random_background_image(self) -> str:
@@ -286,14 +267,7 @@ class ImageUtils:
             return ''
     
     def _get_image_files(self, directory: str) -> list:
-        """获取目录中的所有图片文件
-        
-        Args:
-            directory: 目录路径
-            
-        Returns:
-            list: 图片文件名列表
-        """
+        """获取目录中的所有图片文件"""
         image_files = []
         for file in os.listdir(directory):
             file_ext = os.path.splitext(file)[1].lower()
@@ -304,14 +278,7 @@ class ImageUtils:
     # ==================== MateriaList 模板渲染方法 ====================
     
     def render_materia_template(self, task_data: dict) -> str:
-        """渲染材料列表 HTML 模板
-        
-        Args:
-            task_data: 任务数据字典
-            
-        Returns:
-            str: 渲染后的 HTML 内容
-        """
+        """渲染材料列表 HTML 模板"""
         templates_dir = os.path.join(self.config_utils.get_plugin_path(), "template")
         env = Environment(loader=FileSystemLoader(templates_dir))
         template = env.get_template("MateriaList.html")
@@ -328,7 +295,7 @@ class ImageUtils:
         return html_content
     
     def _get_background_image_style_for_materia(self) -> str:
-        """获取材料列表背景图片样式（Base64编码）"""
+        """获取材料列表背景图片样式（跨平台支持）"""
         if not self.enable_background_image:
             return ""
             
@@ -337,23 +304,15 @@ class ImageUtils:
             return ""
             
         try:
-            with open(background_image_path, 'rb') as img_file:
-                img_data = img_file.read()
-                img_base64 = base64.b64encode(img_data).decode('utf-8')
-                return f"background-image: url('data:image/jpeg;base64,{img_base64}');"
+            # 使用跨平台路径转换函数
+            file_url = path_to_file_url(background_image_path)
+            return f"background-image: url('{file_url}');"
         except Exception as e:
-            logger.error(f"读取背景图片失败: {e}")
+            logger.error(f"创建背景样式失败: {e}")
             return ""
     
     def _process_materia_list(self, materia_list: list) -> list:
-        """处理材料列表数据
-        
-        Args:
-            materia_list: 原始材料列表
-            
-        Returns:
-            list: 处理后的材料列表
-        """
+        """处理材料列表数据"""
         def calculate_remaining_box(total, commit_count):
             """计算剩余盒数"""
             return max(0, math.floor((total - commit_count) / ITEMS_PER_BOX))
@@ -382,14 +341,7 @@ class ImageUtils:
     # ==================== 高度计算方法 ====================
     
     def _calculate_list_screenshot_height(self, servers_data=None) -> int:
-        """计算列表截图高度
-        
-        Args:
-            servers_data: 服务器数据
-            
-        Returns:
-            int: 截图高度（像素）
-        """
+        """计算列表截图高度"""
         if not servers_data:
             return max(LIST_MIN_HEIGHT, LIST_BASE_HEIGHT)
         
@@ -407,14 +359,7 @@ class ImageUtils:
         return max(LIST_MIN_HEIGHT, LIST_BASE_HEIGHT + content_height)
     
     def _count_total_players(self, servers_data: dict) -> int:
-        """统计所有服务器的玩家总数
-        
-        Args:
-            servers_data: 服务器数据
-            
-        Returns:
-            int: 总玩家数
-        """
+        """统计所有服务器的玩家总数"""
         total = 0
         for _, data in servers_data.items():
             total += len(data.get('real_players', []))
@@ -422,14 +367,7 @@ class ImageUtils:
         return total
     
     def _calculate_materia_screenshot_height(self, materia_list: list) -> int:
-        """计算材料列表截图高度
-        
-        Args:
-            materia_list: 材料列表
-            
-        Returns:
-            int: 截图高度（像素）
-        """
+        """计算材料列表截图高度"""
         single_location_count = 0
         multi_location_height = 0
         
@@ -459,18 +397,11 @@ class ImageUtils:
     # ==================== 截图方法 ====================
     
     async def _take_screenshot(self, html_content: str, height: int, filename: str) -> str:
-        """使用 playwright 截图（统一截图方法）
-        
-        Args:
-            html_content: HTML 内容
-            height: 截图高度
-            filename: 保存的文件名
-            
-        Returns:
-            str: 截图文件路径
-        """
+        """使用 playwright 截图（统一截图方法）"""
         path = os.path.join(self.output, filename)
-        
+        # 创建临时 HTML 文件以支持本地资源加载
+        temp_html_path = os.path.join(self.output, f'temp_{filename}.html')
+
         await self.browser_manager.ensure_browser()
         page = await self.browser_manager.browser.new_page(viewport={
             'width': SCREENSHOT_WIDTH,
@@ -478,9 +409,22 @@ class ImageUtils:
         })
         
         try:
-            await page.set_content(html_content, wait_until='networkidle')
-            await page.screenshot(path=path)
+            # 将 HTML 写入临时文件
+            with open(temp_html_path, 'w', encoding='utf-8') as f:
+                f.write(html_content)
+            
+            # 使用跨平台路径转换函数构建 file:// URL
+            file_url = path_to_file_url(temp_html_path)
+            
+            await page.goto(file_url, wait_until='load')
+            await page.screenshot(path=path, full_page=False)
         finally:
             await page.close()
+            # 删除临时 HTML 文件
+            try:
+                if os.path.exists(temp_html_path):
+                    os.remove(temp_html_path)
+            except Exception as e:
+                logger.warning(f'删除临时文件失败: {e}')
         
         return path
