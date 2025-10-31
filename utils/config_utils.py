@@ -1,10 +1,8 @@
 import base64
 import os
-import json
 import pathlib
 
 from astrbot.core import AstrBotConfig
-from astrbot.api import logger
 
 
 class ConfigUtils:

@@ -77,14 +77,14 @@ class FileParser:
         """
         try:
             # 解析 litematic 源文件
-            parse_result = parse_litematic(file_path)
-            
-            # 检查解析错误
-            if "error" in parse_result:
-                return {"code": 500, "msg": f"解析投影源文件失败喵~: {parse_result['error']}"}
+            result = parse_litematic(file_path)
+
+            if result is None or "error" in result:
+                logger.error(f"错误: {result.get('error', '未知错误') if result else '未知错误'}")
+                return {"code": 500, "msg": f"解析投影源文件报错喵~: {f"错误: {result.get('error', '未知错误') if result else '未知错误'}"}"}
             
             # 合并多区域的材料
-            merged_blocks = self._merge_regions(parse_result)
+            merged_blocks = self._merge_regions(result)
             
             # 构建材料列表
             result = []

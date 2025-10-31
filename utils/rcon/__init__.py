@@ -1,7 +1,7 @@
 from .main import Rcon
 from .pool import (
     RconConnection,
-    RconConnectionPool,
+    RconPool,
     get_rcon_pool,
     close_rcon_pool,
 )
@@ -9,7 +9,7 @@ from .pool import (
 __all__ = [
     "Rcon",
     "RconConnection",
-    "RconConnectionPool",
+    "RconPool",
     "get_rcon_pool",
     "close_rcon_pool",
 ]

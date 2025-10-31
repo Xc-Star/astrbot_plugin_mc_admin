@@ -8,7 +8,7 @@ from .utils.command.main import CommandUtils
 from .utils.rcon.pool import close_rcon_pool
 from .utils.decorators import in_enabled_groups, requires_enabled
 from .utils.db import DbUtils
-from cachetools import TTLCache, cached
+from cachetools import TTLCache
 
 @register(
     "astrbot_plugin_mc_admin",
@@ -42,8 +42,8 @@ class McAdminPlugin(Star):
         
         # 直接执行 playwright install chromium 命令
         # Playwright 会检查是否已安装，如果已安装会立即返回
-        logger.info("正在检查并安装 Playwright Chromium...")
-        logger.info("注意：如果未安装，首次安装可能需要几分钟时间，请耐心等待...")
+        logger.warning("正在检查并安装 Playwright Chromium...")
+        logger.warning("注意：如果未安装，首次安装可能需要几分钟时间，请耐心等待...")
         
         try:
             # 执行 playwright install chromium 命令

@@ -1,6 +1,6 @@
 import json
 import os
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional
 from astrbot.core import logger
 
 

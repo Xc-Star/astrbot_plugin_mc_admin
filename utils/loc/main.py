@@ -1,4 +1,3 @@
-"""位置管理工具类 - 使用数据库存储"""
 import sqlite3
 from typing import Optional, List
 from astrbot.api import logger

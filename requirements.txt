@@ -1,5 +1,8 @@
-mcrcon==0.7.0
-cachetools==6.2.0
-litemapy
+mcrcon
+cachetools
 numpy
 playwright
+nbtlib
+numba
+httpx
+jinja2

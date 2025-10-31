@@ -15,10 +15,7 @@ from .fileparse.main import FileParser
 
 # 常量定义（兼容性保留）
 class MaterialConstants:
-    """材料计算相关常量
-    
-    注意：部分常量已迁移到 image_utils 中，这里保留以保持兼容性
-    """
+    """材料计算相关常量"""
     # 物品数量常量
     ITEMS_PER_STACK = 64  # 每组物品数量
     STACKS_PER_BOX = 27  # 每组箱子（27组）
