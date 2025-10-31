@@ -7,7 +7,7 @@
     <style>
         @font-face {
           font-family: 'Jiying';
-          src: url({{ font }}) format('truetype');
+          src: url("{{ font }}") format('truetype');
         }
         * {
             margin: 0;
@@ -32,8 +32,11 @@
             left: 0;
             width: 100%;
             height: 100%;
-            z-index: -1;
-            {{ background_image_style }}
+            z-index: -2;
+            {{ background_image_style | safe }}
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
         }
         
         body::after {
@@ -165,67 +168,54 @@
     <div class="container">
         <div class="title">Minecraft 在线玩家列表</div>
         <div id="servers-container">
-            <!-- 服务器卡片将通过 JavaScript 动态生成 -->
-        </div>
-    </div>
-
-    <script>
-        // 玩家数据将通过 Python 传递到这里
-        const serversData = JSON.parse('{{ servers_data | safe }}');
-        
-        function renderServers() {
-            const container = document.getElementById('servers-container');
-            
-            if (!serversData || Object.keys(serversData).length === 0) {
-                container.innerHTML = '<div class="no-players">暂无服务器数据</div>';
-                return;
-            }
-            
-            let html = '';
-            
-            for (const [serverName, data] of Object.entries(serversData)) {
-                html += `
+            {% if servers_data %}
+                {% for server_name, data in servers_data.items() %}
                     <div class="server-card">
-                        <div class="server-name">${serverName}</div>
+                        <div class="server-name">{{ server_name }}</div>
                         
                         <div class="player-section real-players">
-                            <div class="section-title">玩家 (${data.real_players.length})</div>
+                            <div class="section-title">玩家 ({{ data.real_players|length }})</div>
                             <div class="player-list">
-                                ${data.real_players.length > 0 ? 
-                                    data.real_players.map(player => `
+                                {% if data.real_players|length > 0 %}
+                                    {% for player in data.real_players %}
                                         <div class="player-card">
-                                            <img src="https://crafthead.net/avatar/${player}" alt="${player}" class="player-avatar" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjNjY2Ii8+Cjx0ZXh0IHg9IjIwIiB5PSIyNCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0IiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+8J+OiTwvdGV4dD4KPC9zdmc+'">
-                                            <div class="player-name">${player}</div>
+                                            <img src="https://crafthead.net/avatar/{{ player }}" 
+                                                 alt="{{ player }}" 
+                                                 class="player-avatar" 
+                                                 onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjNjY2Ii8+Cjx0ZXh0IHg9IjIwIiB5PSIyNCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0IiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+8J+OiTwvdGV4dD4KPC9zdmc+'">
+                                            <div class="player-name">{{ player }}</div>
                                         </div>
-                                    `).join('') : 
-                                    '<div class="no-players" style="width: 100%; text-align: center;">没有玩家在线</div>'
-                                }
+                                    {% endfor %}
+                                {% else %}
+                                    <div class="no-players" style="width: 100%; text-align: center;">没有玩家在线</div>
+                                {% endif %}
                             </div>
                         </div>
                         
                         <div class="player-section bot-players">
-                            <div class="section-title">假人 (${data.bot_players.length})</div>
+                            <div class="section-title">假人 ({{ data.bot_players|length }})</div>
                             <div class="player-list">
-                                ${data.bot_players.length > 0 ? 
-                                    data.bot_players.map(player => `
+                                {% if data.bot_players|length > 0 %}
+                                    {% for player in data.bot_players %}
                                         <div class="player-card">
-                                            <img src="https://crafthead.net/avatar/${player}" alt="${player}" class="player-avatar" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjNjY2Ii8+Cjx0ZXh0IHg9IjIwIiB5PSIyNCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0IiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+8J+OiTwvdGV4dD4KPC9zdmc+'">
-                                            <div class="player-name">${player}</div>
+                                            <img src="https://crafthead.net/avatar/{{ player }}" 
+                                                 alt="{{ player }}" 
+                                                 class="player-avatar" 
+                                                 onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjNjY2Ii8+Cjx0ZXh0IHg9IjIwIiB5PSIyNCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0IiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+8J+OiTwvdGV4dD4KPC9zdmc+'">
+                                            <div class="player-name">{{ player }}</div>
                                         </div>
-                                    `).join('') : 
-                                    '<div class="no-players" style="width: 100%; text-align: center;">没有假人在线</div>'
-                                }
+                                    {% endfor %}
+                                {% else %}
+                                    <div class="no-players" style="width: 100%; text-align: center;">没有假人在线</div>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
-                `;
-            }
-            
-            container.innerHTML = html;
-        }
-        
-        // 页面加载完成后渲染
-        document.addEventListener('DOMContentLoaded', renderServers);
-    </script>
+                {% endfor %}
+            {% else %}
+                <div class="no-players">暂无服务器数据</div>
+            {% endif %}
+        </div>
+    </div>
 </body>
 </html>

@@ -24,7 +24,7 @@
         "default": false
     },
     "enable_background_image": {
-        "description": "list生成的图片是否开启背景图",
+        "description": "生成的图片是否开启背景图",
         "type": "bool",
         "hint": "",
         "default": true

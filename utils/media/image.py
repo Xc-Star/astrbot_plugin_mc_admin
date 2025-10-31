@@ -4,6 +4,7 @@ import os
 import json
 import random
 import math
+import re
 from urllib.parse import urljoin
 from urllib.request import pathname2url
 from jinja2 import FileSystemLoader, Environment
@@ -25,7 +26,7 @@ LIST_MIN_HEIGHT = 900  # 最小高度
 
 # 材料列表相关常量（MateriaList.html）
 MATERIAL_BASE_HEIGHT = 197  # 基础高度
-MATERIAL_ROW_HEIGHT = 71  # 单个材料行高度
+MATERIAL_ROW_HEIGHT = 72  # 单个材料行高度
 MATERIAL_LOCATION_LINE_HEIGHT = 35  # 位置行高度
 MATERIAL_MIN_HEIGHT = 960  # 最小截图高度
 
@@ -37,7 +38,7 @@ ITEMS_PER_BOX = 1728  # 每箱物品数量 (64 * 27)
 SUPPORTED_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.bmp']
 
 # 默认背景颜色
-DEFAULT_BACKGROUND_COLOR = "#2B2D30"
+DEFAULT_BACKGROUND_COLOR = "#43454A"
 
 
 # ==================== 工具函数 ====================
@@ -78,8 +79,7 @@ class ImageUtils:
         # 使用 BrowserManager 管理 browser 实例
         self.browser_manager = BrowserManager()
         
-        # 缓存模板内容和背景图片路径
-        self._template_cache = None
+        # 记录最后使用的背景图片路径
         self._background_image = None
     
     # ==================== 公共方法 ====================
@@ -93,7 +93,7 @@ class ImageUtils:
         await self.browser_manager.close()
     
     async def generate_list_image(self, servers_data=None):
-        """生成服务器列表图片
+        """生成在线玩家列表图片
 
         Returns:
             str: 生成的图片文件路径
@@ -136,101 +136,50 @@ class ImageUtils:
     # ==================== 模板渲染方法 ====================
     
     def render_list_template(self, servers_data=None):
-        """渲染HTML模板"""
-        try:
-            # 读取并缓存模板内容
-            html_content = self._get_template_content()
-            # 注入各种数据
-            html_content = self._inject_servers_data(html_content, servers_data)
-            html_content = self._inject_background_style(html_content)
-            html_content = self._inject_font(html_content)
-            return html_content
-        except Exception as e:
-            logger.error(f"渲染模板失败: {str(e)}")
-            return f"<html><body><h1>模板渲染错误喵~</h1><p>{str(e)}</p></body></html>"
-    
-    def _get_template_content(self):
-        """获取模板内容，带缓存机制"""
-        if self._template_cache is not None:
-            return self._template_cache
+        """渲染玩家列表 HTML 模板"""
+        templates_dir = os.path.join(self.config_utils.get_plugin_path(), "template")
+        env = Environment(loader=FileSystemLoader(templates_dir))
+        template = env.get_template("list.html")
         
-        template_path = Path(os.path.join(self.template_dir, 'list.html'))
-        if not template_path.exists():
-            raise FileNotFoundError(f"模板文件不存在: {template_path}")
-        
-        try:
-            with open(template_path, 'r', encoding='utf-8') as f:
-                self._template_cache = f.read()
-            return self._template_cache
-        except Exception as e:
-            raise IOError(f"读取模板文件失败: {str(e)}")
-    
-    def _inject_font(self, html_content: str) -> str:
-        """注入字体到 HTML"""
+        # 准备背景样式
+        background_image_style = self._get_background_image_style()
+        # 获取字体
         font = self.config_utils.get_font()
-        return html_content.replace('{{ font }}', font)
-    
-    def _inject_servers_data(self, html_content: str, servers_data: dict) -> str:
-        """将服务器数据注入到HTML中"""
-        # 参数验证和默认值处理
-        if servers_data is not None and not isinstance(servers_data, dict):
-            logger.warning("服务器数据格式不正确，应为字典类型")
-            servers_data = {}
-        
+        # 准备服务器数据（直接传递字典，不需要转 JSON）
         servers_data = servers_data or {}
         
-        try:
-            servers_json = json.dumps(servers_data, ensure_ascii=False)
-            # 转义JSON字符串中的引号，避免与HTML属性冲突
-            servers_json_escaped = servers_json.replace('"', '\\"')
-            return html_content.replace('{{ servers_data | safe }}', servers_json_escaped)
-        except Exception as e:
-            logger.error(f"注入服务器数据失败: {str(e)}")
-            return html_content.replace('{{ servers_data | safe }}', '{}')
+        html_content = template.render({
+            "servers_data": servers_data,
+            "background_image_style": background_image_style,
+            "font": font
+        })
+        
+        return html_content
     
-    def _inject_background_style(self, html_content: str) -> str:
-        """将背景样式注入到HTML中"""
-        try:
-            # 未启用背景图片或未找到图片时使用默认背景
-            if not self.enable_background_image:
-                return self._replace_background_style(html_content, self._get_default_background())
-            
-            background_image_path = self.get_random_background_image()
-            
-            if not background_image_path:
-                logger.debug("未找到可用的背景图片，使用默认渐变背景")
-                return self._replace_background_style(html_content, self._get_default_background())
-            
-            # 生成本地文件路径的背景样式（file:// URL）
-            background_style = self._create_background_style_from_file(background_image_path)
-            if background_style:
-                return self._replace_background_style(html_content, background_style)
-            
-            return self._replace_background_style(html_content, self._get_default_background())
-            
-        except Exception as e:
-            logger.error(f"注入背景样式失败: {str(e)}")
-            return self._replace_background_style(html_content, self._get_default_background())
-    
-    def _get_default_background(self) -> str:
-        """获取默认背景样式"""
-        return f"background: {DEFAULT_BACKGROUND_COLOR};"
-    
-    def _replace_background_style(self, html_content: str, background_style: str) -> str:
-        """替换 HTML 中的背景样式占位符"""
-        return html_content.replace('{{ background_image_style }}', background_style)
-    
-    def _create_background_style_from_file(self, image_path: str) -> str:
-        """从文件创建背景样式（跨平台支持）"""
+    def _get_background_image_style(self) -> str:
+        """获取背景图片样式（跨平台支持）
+        
+        Returns:
+            str: CSS 背景样式字符串
+        """
+        # 未启用背景图片时使用默认背景
+        if not self.enable_background_image:
+            return f"background: {DEFAULT_BACKGROUND_COLOR};"
+        
+        background_image_path = self.get_random_background_image()
+        
+        # 未找到图片时使用默认背景
+        if not background_image_path:
+            logger.debug("未找到可用的背景图片，使用默认背景")
+            return f"background: {DEFAULT_BACKGROUND_COLOR};"
+        
         try:
             # 使用跨平台路径转换函数
-            file_url = path_to_file_url(image_path)
-            
-            return (f"background-image: url('{file_url}'); "
-                   "background-size: cover; background-position: center; background-repeat: no-repeat;")
+            file_url = path_to_file_url(background_image_path)
+            return f"background-image: url('{file_url}');"
         except Exception as e:
             logger.error(f"创建背景样式失败: {e}")
-            return ""
+            return f"background: {DEFAULT_BACKGROUND_COLOR};"
     
     def get_random_background_image(self) -> str:
         """从背景图片目录中随机选择一张图片
@@ -283,7 +232,8 @@ class ImageUtils:
         env = Environment(loader=FileSystemLoader(templates_dir))
         template = env.get_template("MateriaList.html")
         
-        background_image_style = self._get_background_image_style_for_materia()
+        # 使用统一的背景样式获取方法
+        background_image_style = self._get_background_image_style()
         font = self.config_utils.get_font()
         
         html_content = template.render({
@@ -294,22 +244,41 @@ class ImageUtils:
         
         return html_content
     
-    def _get_background_image_style_for_materia(self) -> str:
-        """获取材料列表背景图片样式（跨平台支持）"""
-        if not self.enable_background_image:
-            return ""
+    def _get_material_image_url(self, material_name_id: str) -> str:
+        """根据材料ID获取本地图片文件URL
+        
+        Args:
+            material_name_id: 材料ID，格式如 minecraft:white_stained_glass
             
-        background_image_path = self.get_random_background_image()
-        if not background_image_path:
-            return ""
-            
-        try:
-            # 使用跨平台路径转换函数
-            file_url = path_to_file_url(background_image_path)
-            return f"background-image: url('{file_url}');"
-        except Exception as e:
-            logger.error(f"创建背景样式失败: {e}")
-            return ""
+        Returns:
+            str: 图片文件的 file:// URL，如果找不到则返回空字符串
+        """
+        if not material_name_id:
+            return ''
+        
+        # 将 minecraft:white_stained_glass 转换为 minecraft_white_stained_glass
+        file_name_base = material_name_id.lower().strip().replace(':', '_')
+        
+        # item_icon 目录路径
+        item_icon_dir = os.path.join(self.output, "item_icon")
+        
+        # 支持的图片扩展名（按优先级排序）
+        supported_extensions = ['.png', '.gif', '.jpg', '.jpeg']
+        
+        # 尝试查找文件
+        for ext in supported_extensions:
+            file_path = os.path.join(item_icon_dir, f"{file_name_base}{ext}")
+            if os.path.exists(file_path):
+                # 转换为 file:// URL
+                try:
+                    return path_to_file_url(file_path)
+                except Exception as e:
+                    logger.warning(f"转换图片路径失败 {file_path}: {e}")
+                    return ''
+        
+        # 如果找不到文件，记录警告
+        logger.debug(f"未找到材料图标文件: {material_name_id} (查找路径: {file_name_base})")
+        return ''
     
     def _process_materia_list(self, materia_list: list) -> list:
         """处理材料列表数据"""
@@ -326,10 +295,13 @@ class ImageUtils:
         for materia in materia_list:
             total = int(materia[3])
             commit_count = int(materia[5])
+            material_name = materia[1]
+            material_name_id = materia[2]
             
             res.append({
                 "number": materia[6],  # 编号
-                "name": materia[1],  # 材料名字
+                "name": material_name,  # 材料名字
+                "image_url": self._get_material_image_url(material_name_id),  # 材料图片URL
                 "total": total,  # 所需总数
                 "remaining_box": calculate_remaining_box(total, commit_count),  # 还差 - 盒
                 "remaining_group": calculate_remaining_group(total, commit_count),  # 还差 - 组

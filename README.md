@@ -5,7 +5,7 @@
 ## 插件信息
 - 插件名称：astrbot_plugin_mc_admin
 - 作者：Xc_Star
-- 版本：0.4.1
+- 版本：0.4.2
 - 仓库地址：[https://github.com/Xc-Star/astrbot_plugin_mc_admin](https://github.com/Xc-Star/astrbot_plugin_mc_admin)
 
 ## 用前提醒
@@ -42,7 +42,7 @@ PS: 如果遇到上传投影材料的时候报错提示**packetBackend**不可�
 | `bot_prefix` | string | "bot_" | 假人的前缀，用于区分假人和真实玩家 |
 | `servers` | list | [] | 配置需要监听的服务器列表，格式为"名字:地址:端口:RCON密码" |
 | `enable_whitelist_compare` | bool | false | list命令是否开启白名单对比 |
-| `enable_background_image` | bool | false | list生成的图片是否开启背景图 |
+| `enable_background_image` | bool | false | 生成的图片是否开启背景图 |
 | `background_image_path` | string | "" | 背景图文件夹路径 |
 
 ## 使用方法

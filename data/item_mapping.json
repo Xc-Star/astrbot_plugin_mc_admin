@@ -1,6 +1,6 @@
 {
   "version": "1.21.9",
-  "description": "Minecraft物品ID与名字映射表（从item_id.json转换）",
+  "description": "Minecraft物品ID与名字映射表。https://mcid.fastmirror.net/",
   "items": {
     "minecraft:air": "空气",
     "minecraft:stone": "石头",
