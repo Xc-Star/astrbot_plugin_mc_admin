@@ -7,7 +7,7 @@ import nbtlib
 
 @jit(nopython=True)
 def parse_block_indices(block_states, total_blocks, bits_per_block):
-    """使用 numba JIT 加速的位解析"""
+    """使用 numba JIT 加速的位解析（正确处理跨long边界）"""
     block_indices = np.zeros(total_blocks, dtype=np.int32)
     mask = (1 << bits_per_block) - 1
 
@@ -18,12 +18,30 @@ def parse_block_indices(block_states, total_blocks, bits_per_block):
         if current_long_idx >= len(block_states):
             break
 
-        block_indices[i] = (block_states[current_long_idx] >> current_bit_offset) & mask
-        current_bit_offset += bits_per_block
+        bits_in_current_long = 64 - current_bit_offset
 
-        if current_bit_offset + bits_per_block > 64:
+        if bits_in_current_long >= bits_per_block:
+            block_indices[i] = (block_states[current_long_idx] >> current_bit_offset) & mask
+            current_bit_offset += bits_per_block
+        else:
+            if current_long_idx + 1 >= len(block_states):
+                break  # 防止越界
+
+            low_mask = (1 << bits_in_current_long) - 1
+            low_bits = (block_states[current_long_idx] >> current_bit_offset) & low_mask
+
+            high_bits_needed = bits_per_block - bits_in_current_long
+            high_mask = (1 << high_bits_needed) - 1
+            high_bits = block_states[current_long_idx + 1] & high_mask
+
+            block_indices[i] = low_bits | (high_bits << bits_in_current_long)
+
             current_long_idx += 1
-            current_bit_offset = 0
+            current_bit_offset = high_bits_needed
+
+        if current_bit_offset >= 64:
+            current_long_idx += 1
+            current_bit_offset -= 64
 
     return block_indices
 

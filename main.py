@@ -127,8 +127,11 @@ class McAdminPlugin(Star):
         result = await self.command_utils.task(msg, event, self.task_temp)
         if result['type'] == "text":
             yield event.plain_result(result['msg'])
-        else:
+        elif result['type'] == "image":
             yield event.image_result(result['msg'])
+        elif result['type'] == "image_list":
+            for img in result['msg']:
+                yield event.image_result(img)
 
     async def terminate(self):
         """可选择实现异步的插件销毁方法，当插件被卸载/停用时会调用。"""

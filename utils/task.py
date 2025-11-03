@@ -136,8 +136,13 @@ class TaskUtils:
         else:
             return {"code": 500, "msg": f"没找到材料喵~"}
 
-    async def render(self, task, materia_list):
+    async def render(self, task, materia_list, filename='task.png'):
         """渲染任务材料列表图片
+
+        Args:
+            task: 任务数据
+            materia_list: 材料列表
+            filename: 输出文件名，默认为 'task.png'
 
         Returns:
             str: 生成的图片文件路径
@@ -155,7 +160,7 @@ class TaskUtils:
         path = await self.image_utils.generate_materia_image(
             task_data=task_data,
             materia_list=materia_list,
-            filename='task.png'
+            filename=filename
         )
         
         return path

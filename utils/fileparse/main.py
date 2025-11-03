@@ -1,5 +1,6 @@
 from typing import Dict, Tuple, Optional
 from astrbot.api import logger
+from chardet import detect
 
 from .item_mapping import ItemMapping
 from .litematic import parse_litematic
@@ -13,6 +14,100 @@ STACK_SIZE_64 = 64  # 默认堆叠数
 
 # 每个潜影盒可存放的组数
 SHULKER_BOX_SLOTS = 27
+
+# 材料合并黑名单 - 这些物品会被直接移除
+MERGE_BLACKLIST = {
+    'minecraft:air', # 空气
+    'minecraft:fire', # 火
+    'minecraft:light', # 光源方块
+    'minecraft:piston_head', # 活塞头
+    'minecraft:bubble_column', # 气泡柱
+    'minecraft:nether_portal', # 地狱传送门方块
+    'minecraft:end_portal' # 末地传送门方块
+    'minecraft:end_portal_frame', # 末地传送门框架
+    'minecraft:command_block', #命令方块
+    'minecraft:repeating_command_block', # 循环命令方块
+    'minecraft:chain_command_block', # 连锁命令方块
+    'minecraft:command_block_minecart', # 连锁命令方块
+    'minecraft:barrier', # 屏障
+    'minecraft:structure_void', # 结构空位
+    'minecraft:end_gateway', # 折跃门
+    'minecraft:structure_block', # 结构方块
+}
+
+# 材料ID映射表
+MATERIAL_ID_MAPPING = {
+    # 活塞
+    'minecraft:moving_piston': 'minecraft:piston',
+
+    # 桶装
+    'minecraft:water': 'minecraft:water_bucket',
+    'minecraft:lava': 'minecraft:lava_bucket',
+    'minecraft:powder_snow': 'minecraft:powder_snow_bucket',
+    
+    # 火把
+    'minecraft:wall_torch': 'minecraft:torch',
+    'minecraft:redstone_wall_torch': 'minecraft:redstone_torch',
+    'minecraft:soul_wall_torch': 'minecraft:soul_torch',
+    'minecraft:copper_wall_torch': 'minecraft:copper_torch',
+    
+    # 旗帜 (16种颜色)
+    'minecraft:white_wall_banner': 'minecraft:white_banner',
+    'minecraft:orange_wall_banner': 'minecraft:orange_banner',
+    'minecraft:magenta_wall_banner': 'minecraft:magenta_banner',
+    'minecraft:light_blue_wall_banner': 'minecraft:light_blue_banner',
+    'minecraft:yellow_wall_banner': 'minecraft:yellow_banner',
+    'minecraft:lime_wall_banner': 'minecraft:lime_banner',
+    'minecraft:pink_wall_banner': 'minecraft:pink_banner',
+    'minecraft:gray_wall_banner': 'minecraft:gray_banner',
+    'minecraft:light_gray_wall_banner': 'minecraft:light_gray_banner',
+    'minecraft:cyan_wall_banner': 'minecraft:cyan_banner',
+    'minecraft:purple_wall_banner': 'minecraft:purple_banner',
+    'minecraft:blue_wall_banner': 'minecraft:blue_banner',
+    'minecraft:brown_wall_banner': 'minecraft:brown_banner',
+    'minecraft:green_wall_banner': 'minecraft:green_banner',
+    'minecraft:red_wall_banner': 'minecraft:red_banner',
+    'minecraft:black_wall_banner': 'minecraft:black_banner',
+
+    # 红石
+    'minecraft:redstone_wire': 'minecraft:redstone',
+    
+    # 告示牌 (所有木材类型)
+    'minecraft:oak_wall_sign': 'minecraft:oak_sign',
+    'minecraft:spruce_wall_sign': 'minecraft:spruce_sign',
+    'minecraft:birch_wall_sign': 'minecraft:birch_sign',
+    'minecraft:jungle_wall_sign': 'minecraft:jungle_sign',
+    'minecraft:acacia_wall_sign': 'minecraft:acacia_sign',
+    'minecraft:dark_oak_wall_sign': 'minecraft:dark_oak_sign',
+    'minecraft:mangrove_wall_sign': 'minecraft:mangrove_sign',
+    'minecraft:cherry_wall_sign': 'minecraft:cherry_sign',
+    'minecraft:bamboo_wall_sign': 'minecraft:bamboo_sign',
+    'minecraft:crimson_wall_sign': 'minecraft:crimson_sign',
+    'minecraft:warped_wall_sign': 'minecraft:warped_sign',
+
+    # 作物
+    'minecraft:attached_pumpkin_stem': 'minecraft:pumpkin_stem',
+    'minecraft:attached_melon_stem': 'minecraft:melon_stem',
+
+    # 锅
+    'minecraft:water_cauldron': 'minecraft:cauldron',
+    'minecraft:lava_cauldron': 'minecraft:cauldron',
+    'minecraft:powder_snow_cauldron': 'minecraft:cauldron',
+
+    'minecraft:tripwire': 'minecraft:string',  # 线
+
+    # 头颅
+    'minecraft:skeleton_wall_skull': 'minecraft:skeleton_skull', # 骷髅头
+    'minecraft:wither_skeleton_wall_skull': 'minecraft:wither_skeleton_skull', # 凋零骷髅头
+    'minecraft:piglin_wall_head': 'minecraft:piglin_head', # 猪灵头
+    'minecraft:zombie_wall_head': 'minecraft:zombie_head', # 僵尸头
+    'minecraft:player_wall_head': 'minecraft:player_head', # 玩家的头
+    'minecraft:creeper_wall_head': 'minecraft:creeper_head', # 苦力怕的头
+    
+    # 其他
+    'minecraft:daylight_detector[inverted=true]': 'minecraft:daylight_detector',
+
+}
 
 # 文件解析配置
 class ParseConfig:
@@ -40,16 +135,7 @@ class FileParser:
         self.item_mapping = ItemMapping()
 
     def parse(self, file_path: str, task_id: int) -> Dict:
-        """解析文件并返回材料列表
-        
-        Args:
-            file_path: 文件路径
-            task_id: 任务ID
-            
-        Returns:
-            {"code": 200, "msg": [(name, item_id, total, location, commit_count, number, task_id), ...]}
-            或 {"code": 500, "msg": "错误信息"}
-        """
+        """解析文件并返回材料列表"""
         # 获取文件扩展名
         file_ext = self._get_file_extension(file_path)
         
@@ -66,15 +152,7 @@ class FileParser:
         return file_path[file_path.rfind('.'):].lower() if '.' in file_path else ''
 
     def _parse_litematic(self, file_path: str, task_id: int) -> Dict:
-        """解析 Litematic 投影文件
-        
-        Args:
-            file_path: 文件路径
-            task_id: 任务ID
-            
-        Returns:
-            解析结果
-        """
+        """解析 Litematic 投影文件"""
         try:
             # 解析 litematic 源文件
             result = parse_litematic(file_path)
@@ -85,6 +163,9 @@ class FileParser:
             
             # 合并多区域的材料
             merged_blocks = self._merge_regions(result)
+
+            # 合并同种类材料
+            merged_blocks = self._merge_same_material(merged_blocks)
             
             # 构建材料列表
             result = []
@@ -100,18 +181,15 @@ class FileParser:
             return {"code": 500, "msg": f"解析投影源文件报错喵~: {str(e)}"}
 
     def _parse_text_file(self, file_path: str, task_id: int, config: ParseConfig) -> Dict:
-        """解析文本文件（TXT/CSV）
-        
-        Args:
-            file_path: 文件路径
-            task_id: 任务ID
-            config: 解析配置
-            
-        Returns:
-            解析结果
-        """
+        """解析文本文件（TXT/CSV）"""
         try:
-            with open(file_path, 'r', encoding='utf-8') as file:
+            # 获取文件编码格式，防止因为各种各样编码导致的报错
+            with open(file_path, 'rb') as fb:
+                raw = fb.read(1 << 20)
+            enc = detect(raw).get('encoding') or 'utf-8'  # 保底 utf-8
+
+            # 以获取到的编码格式打开文件
+            with open(file_path, 'r', encoding=enc) as file:
                 lines = file.read().split('\n')
             
             # 校验文件行数
@@ -142,17 +220,7 @@ class FileParser:
             return {"code": 500, "msg": "解析不了喵~"}
 
     def _parse_line(self, line: str, config: ParseConfig, number: int, task_id: int) -> Optional[Tuple]:
-        """解析单行材料数据
-        
-        Args:
-            line: 行内容
-            config: 解析配置
-            number: 材料编号
-            task_id: 任务ID
-            
-        Returns:
-            (name, item_id, total, location, commit_count, number, task_id) 或 None
-        """
+        """解析单行材料数据"""
         try:
             parts = line.split(config.interval)
             
@@ -175,14 +243,7 @@ class FileParser:
             return None
 
     def _merge_regions(self, parse_result: Dict) -> Dict[str, int]:
-        """合并所有区域的同种材料
-        
-        Args:
-            parse_result: Litematic 解析结果
-            
-        Returns:
-            {block_id: total_count}
-        """
+        """合并所有区域的同种材料"""
         merged_blocks = {}
         
         if "regions" in parse_result:
@@ -194,16 +255,38 @@ class FileParser:
         
         return merged_blocks
 
+    def _merge_same_material(self, merged_blocks: Dict[str, int]) -> Dict[str, int]:
+        """合并同种类材料"""
+        result = {}
+        
+        for block_id, count in merged_blocks.items():
+            # 1. 提取基础方块ID和状态标记
+            base_block_id = block_id.split('[')[0] if '[' in block_id else block_id
+            
+            # 检查是否是 type=double 状态，如果是则数量x2
+            actual_count = count
+            if '[' in block_id and 'type=double' in block_id:
+                actual_count = count * 2
+            
+            # 2. 检查是否在黑名单中
+            if base_block_id in MERGE_BLACKLIST:
+                # 在黑名单中，直接跳过，移除该物品
+                continue
+            
+            # 3. 检查是否在映射表中，应用ID映射
+            final_block_id = MATERIAL_ID_MAPPING.get(base_block_id, base_block_id)
+            
+            # 4. 累加数量到最终的方块ID
+            result[final_block_id] = result.get(final_block_id, 0) + actual_count
+        
+        # 5. 按数量降序排序
+        sorted_result = dict(sorted(result.items(), key=lambda item: item[1], reverse=True))
+        
+        return sorted_result
+
     # ==================== 工具方法 ====================
     def get_stack_size(self, item_name: str) -> int:
-        """获取物品的堆叠数量
-        
-        Args:
-            item_name: 物品名称
-            
-        Returns:
-            堆叠数量
-        """
+        """获取物品的堆叠数量"""
         # 特殊堆叠规则
         if any(item_name.endswith(suffix) for suffix in ['潜影盒', '旗帜', '盔甲架', '告示牌']):
             return STACK_SIZE_16
@@ -215,15 +298,7 @@ class FileParser:
             return STACK_SIZE_64
 
     def get_gb_total(self, name: str, total: int) -> Tuple[float, float]:
-        """计算材料的组数和盒数
-        
-        Args:
-            name: 物品名称
-            total: 物品总数
-            
-        Returns:
-            (group_total, box_total) - 组数和盒数
-        """
+        """计算材料的组数和盒数"""
         stack_size = self.get_stack_size(name)
         
         # 计算组数（向上取整保留2位小数）
