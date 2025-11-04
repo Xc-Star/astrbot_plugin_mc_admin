@@ -16,19 +16,26 @@
             font-family: 'Jiying', sans-serif;
         }
 
+        html {
+            overflow-x: visible;
+            overflow-y: visible;
+        }
+
         body {
             font-family: 'Microsoft YaHei', 'PingFang SC', 'Helvetica Neue', Arial, sans-serif;
             padding: 32px;
             color: #333;
             margin: 0;
             position: relative;
-            overflow: hidden;
+            overflow: visible;
             min-height: 100vh;
+            width: max-content;
+            min-width: 100%;
         }
 
         body::before {
             content: '';
-            position: fixed;
+            position: absolute;
             top: 0;
             left: 0;
             width: 100%;
@@ -36,13 +43,13 @@
             z-index: -2;
             {{ background_image_style | safe }}
             background-size: cover;
-            background-position: center;
+            background-position: center center;
             background-repeat: no-repeat;
         }
 
         body::after {
             content: '';
-            position: fixed;
+            position: absolute;
             top: 0;
             left: 0;
             width: 100%;
@@ -53,8 +60,22 @@
         }
 
         .container {
-            max-width: 1200px;
+            max-width: none;
             margin: 0 auto;
+            width: 100%;
+        }
+
+        .materials-grid {
+            display: flex;
+            flex-direction: row;
+            gap: 20px;
+            width: 100%;
+            flex-wrap: nowrap;
+        }
+
+        .material-column {
+            flex: 1 1 1100px;
+            min-width: 1100px;
         }
 
         .title {
@@ -216,45 +237,52 @@
                 </div>
             </div>
 
-            <table class="materials-table">
-                <thead>
-                    <tr>
-                        <th>编号</th>
-                        <th>材料</th>
-                        <th>所需总数</th>
-                        <th>还需/盒</th>
-                        <th>还需/组</th>
-                        <th>备货人</th>
-                        <th>所在位置/假人</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for materia in data.materia_list %}
-                        <tr>
-                            <td>{{ materia.number }}</td>
-                            <td>
-                                {% if materia.image_url %}
-                                    <img src="{{ materia.image_url }}" alt="{{ materia.name }}" class="material-icon" onerror="this.style.opacity='0.3'; this.onerror=null;">
-                                {% endif %}
-                                {{ materia.name }}
-                            </td>
-<!--                            <td>{{ materia.name }}</td>-->
-                            <td>{{ materia.total }}</td>
-                            <td>{{ materia.remaining_box }}</td>
-                            <td>{{ materia.remaining_group }}</td>
-<!--                            <td><span class="{% if materia.progress == '是'%}status-completed{% else %}status-not-started{% endif %}">{{ materia.progress }}</span></td>-->
-                            <td>{% if materia.recipient == "" %}-{% else %}{{ materia.recipient }}{% endif %}</td>
-                            <td>
-                                {% if materia.location == "" %}
-                                    -
-                                {% else %}
-                                    {{ materia.location | replace('"', '') | replace('[', '') | replace(']', '') | replace(',', '<br>') }}
-                                {% endif %}
-                            </td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+            <div class="materials-grid">
+                {% set items_per_column = 100 %}
+                {% set num_columns = ((data.materia_list|length + items_per_column - 1) // items_per_column) %}
+                
+                {% for col in range(num_columns) %}
+                <div class="material-column">
+                    <table class="materials-table">
+                        <thead>
+                            <tr>
+                                <th>编号</th>
+                                <th>材料</th>
+                                <th>所需总数</th>
+                                <th>还需/盒</th>
+                                <th>还需/组</th>
+                                <th>备货人</th>
+                                <th>所在位置/假人</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for materia in data.materia_list[col * items_per_column:(col + 1) * items_per_column] %}
+                                <tr>
+                                    <td>{{ materia.number }}</td>
+                                    <td>
+                                        {% if materia.image_url %}
+                                            <img src="{{ materia.image_url }}" alt="{{ materia.name }}" class="material-icon" onerror="this.style.opacity='0.3'; this.onerror=null;">
+                                        {% endif %}
+                                        {{ materia.name }}
+                                    </td>
+                                    <td>{{ materia.total }}</td>
+                                    <td>{{ materia.remaining_box }}</td>
+                                    <td>{{ materia.remaining_group }}</td>
+                                    <td>{% if materia.recipient == "" %}-{% else %}{{ materia.recipient }}{% endif %}</td>
+                                    <td>
+                                        {% if materia.location == "" %}
+                                            -
+                                        {% else %}
+                                            {{ materia.location | replace('"', '') | replace('[', '') | replace(']', '') | replace(',', '<br>') }}
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endfor %}
+            </div>
         </div>
     </div>
 </body>

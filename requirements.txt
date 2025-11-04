@@ -6,3 +6,4 @@ nbtlib
 numba
 httpx
 jinja2
+chardet

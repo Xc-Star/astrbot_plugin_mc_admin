@@ -1,4 +1,6 @@
-from typing import Dict, Tuple, Optional
+import json
+import os
+from typing import Dict, Tuple, Optional, Set
 from astrbot.api import logger
 from chardet import detect
 
@@ -14,100 +16,6 @@ STACK_SIZE_64 = 64  # 默认堆叠数
 
 # 每个潜影盒可存放的组数
 SHULKER_BOX_SLOTS = 27
-
-# 材料合并黑名单 - 这些物品会被直接移除
-MERGE_BLACKLIST = {
-    'minecraft:air', # 空气
-    'minecraft:fire', # 火
-    'minecraft:light', # 光源方块
-    'minecraft:piston_head', # 活塞头
-    'minecraft:bubble_column', # 气泡柱
-    'minecraft:nether_portal', # 地狱传送门方块
-    'minecraft:end_portal' # 末地传送门方块
-    'minecraft:end_portal_frame', # 末地传送门框架
-    'minecraft:command_block', #命令方块
-    'minecraft:repeating_command_block', # 循环命令方块
-    'minecraft:chain_command_block', # 连锁命令方块
-    'minecraft:command_block_minecart', # 连锁命令方块
-    'minecraft:barrier', # 屏障
-    'minecraft:structure_void', # 结构空位
-    'minecraft:end_gateway', # 折跃门
-    'minecraft:structure_block', # 结构方块
-}
-
-# 材料ID映射表
-MATERIAL_ID_MAPPING = {
-    # 活塞
-    'minecraft:moving_piston': 'minecraft:piston',
-
-    # 桶装
-    'minecraft:water': 'minecraft:water_bucket',
-    'minecraft:lava': 'minecraft:lava_bucket',
-    'minecraft:powder_snow': 'minecraft:powder_snow_bucket',
-    
-    # 火把
-    'minecraft:wall_torch': 'minecraft:torch',
-    'minecraft:redstone_wall_torch': 'minecraft:redstone_torch',
-    'minecraft:soul_wall_torch': 'minecraft:soul_torch',
-    'minecraft:copper_wall_torch': 'minecraft:copper_torch',
-    
-    # 旗帜 (16种颜色)
-    'minecraft:white_wall_banner': 'minecraft:white_banner',
-    'minecraft:orange_wall_banner': 'minecraft:orange_banner',
-    'minecraft:magenta_wall_banner': 'minecraft:magenta_banner',
-    'minecraft:light_blue_wall_banner': 'minecraft:light_blue_banner',
-    'minecraft:yellow_wall_banner': 'minecraft:yellow_banner',
-    'minecraft:lime_wall_banner': 'minecraft:lime_banner',
-    'minecraft:pink_wall_banner': 'minecraft:pink_banner',
-    'minecraft:gray_wall_banner': 'minecraft:gray_banner',
-    'minecraft:light_gray_wall_banner': 'minecraft:light_gray_banner',
-    'minecraft:cyan_wall_banner': 'minecraft:cyan_banner',
-    'minecraft:purple_wall_banner': 'minecraft:purple_banner',
-    'minecraft:blue_wall_banner': 'minecraft:blue_banner',
-    'minecraft:brown_wall_banner': 'minecraft:brown_banner',
-    'minecraft:green_wall_banner': 'minecraft:green_banner',
-    'minecraft:red_wall_banner': 'minecraft:red_banner',
-    'minecraft:black_wall_banner': 'minecraft:black_banner',
-
-    # 红石
-    'minecraft:redstone_wire': 'minecraft:redstone',
-    
-    # 告示牌 (所有木材类型)
-    'minecraft:oak_wall_sign': 'minecraft:oak_sign',
-    'minecraft:spruce_wall_sign': 'minecraft:spruce_sign',
-    'minecraft:birch_wall_sign': 'minecraft:birch_sign',
-    'minecraft:jungle_wall_sign': 'minecraft:jungle_sign',
-    'minecraft:acacia_wall_sign': 'minecraft:acacia_sign',
-    'minecraft:dark_oak_wall_sign': 'minecraft:dark_oak_sign',
-    'minecraft:mangrove_wall_sign': 'minecraft:mangrove_sign',
-    'minecraft:cherry_wall_sign': 'minecraft:cherry_sign',
-    'minecraft:bamboo_wall_sign': 'minecraft:bamboo_sign',
-    'minecraft:crimson_wall_sign': 'minecraft:crimson_sign',
-    'minecraft:warped_wall_sign': 'minecraft:warped_sign',
-
-    # 作物
-    'minecraft:attached_pumpkin_stem': 'minecraft:pumpkin_stem',
-    'minecraft:attached_melon_stem': 'minecraft:melon_stem',
-
-    # 锅
-    'minecraft:water_cauldron': 'minecraft:cauldron',
-    'minecraft:lava_cauldron': 'minecraft:cauldron',
-    'minecraft:powder_snow_cauldron': 'minecraft:cauldron',
-
-    'minecraft:tripwire': 'minecraft:string',  # 线
-
-    # 头颅
-    'minecraft:skeleton_wall_skull': 'minecraft:skeleton_skull', # 骷髅头
-    'minecraft:wither_skeleton_wall_skull': 'minecraft:wither_skeleton_skull', # 凋零骷髅头
-    'minecraft:piglin_wall_head': 'minecraft:piglin_head', # 猪灵头
-    'minecraft:zombie_wall_head': 'minecraft:zombie_head', # 僵尸头
-    'minecraft:player_wall_head': 'minecraft:player_head', # 玩家的头
-    'minecraft:creeper_wall_head': 'minecraft:creeper_head', # 苦力怕的头
-    
-    # 其他
-    'minecraft:daylight_detector[inverted=true]': 'minecraft:daylight_detector',
-
-}
 
 # 文件解析配置
 class ParseConfig:
@@ -133,6 +41,11 @@ class FileParser:
         """初始化文件解析器"""
         # 使用 ItemMapping 的默认路径解析（插件根/data/item_mapping.json）
         self.item_mapping = ItemMapping()
+        
+        # 加载材料过滤和映射配置
+        self.merge_blacklist: Set[str] = set()
+        self.material_id_mapping: Dict[str, str] = {}
+        self._load_material_filter_config()
 
     def parse(self, file_path: str, task_id: int) -> Dict:
         """解析文件并返回材料列表"""
@@ -150,6 +63,32 @@ class FileParser:
     def _get_file_extension(self, file_path: str) -> str:
         """获取文件扩展名（小写）"""
         return file_path[file_path.rfind('.'):].lower() if '.' in file_path else ''
+
+    def _load_material_filter_config(self):
+        """加载材料过滤和映射配置文件"""
+        try:
+            # 获取配置文件路径（插件根目录/data/material_filter_config.json）
+            current_dir = os.path.dirname(os.path.abspath(__file__))  # utils/fileparse
+            plugin_root = os.path.dirname(os.path.dirname(current_dir))  # 插件根目录
+            config_path = os.path.join(plugin_root, 'data', 'material_filter_config.json')
+            
+            # 加载配置文件
+            if os.path.exists(config_path):
+                with open(config_path, 'r', encoding='utf-8') as f:
+                    config = json.load(f)
+                    
+                # 加载黑名单
+                self.merge_blacklist = set(config.get('merge_blacklist', []))
+                
+                # 加载映射表
+                self.material_id_mapping = config.get('material_id_mapping', {})
+                
+                logger.info(f"材料过滤配置加载成功: 黑名单 {len(self.merge_blacklist)} 项, 映射 {len(self.material_id_mapping)} 项")
+            else:
+                logger.warning(f"材料过滤配置文件不存在: {config_path}，使用空配置")
+                
+        except Exception as e:
+            logger.error(f"加载材料过滤配置失败: {e}，使用空配置")
 
     def _parse_litematic(self, file_path: str, task_id: int) -> Dict:
         """解析 Litematic 投影文件"""
@@ -269,12 +208,12 @@ class FileParser:
                 actual_count = count * 2
             
             # 2. 检查是否在黑名单中
-            if base_block_id in MERGE_BLACKLIST:
+            if base_block_id in self.merge_blacklist:
                 # 在黑名单中，直接跳过，移除该物品
                 continue
             
             # 3. 检查是否在映射表中，应用ID映射
-            final_block_id = MATERIAL_ID_MAPPING.get(base_block_id, base_block_id)
+            final_block_id = self.material_id_mapping.get(base_block_id, base_block_id)
             
             # 4. 累加数量到最终的方块ID
             result[final_block_id] = result.get(final_block_id, 0) + actual_count

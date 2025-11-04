@@ -35,11 +35,11 @@ __MACOSX/
 *.tmp
 *.temp
 *.bak
-*.swp
 
 # 生成的图片
 list.png
 task.png
+task_*.png
 
 # 环境变量文件
 .env

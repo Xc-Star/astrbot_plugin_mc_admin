@@ -124,12 +124,16 @@ class ImageUtils:
 
         # 计算截图高度
         height = self._calculate_materia_screenshot_height(task_data_with_materia['materia_list'])
+        
+        # 计算截图宽度（根据材料数量）
+        material_count = len(task_data_with_materia['materia_list'])
+        width = self._calculate_materia_screenshot_width(material_count)
 
         # 渲染 HTML 模板
         html_content = self.render_materia_template(task_data_with_materia)
 
         # 截图
-        path = await self._take_screenshot(html_content, height, filename)
+        path = await self._take_screenshot(html_content, height, filename, width, full_page=True)
 
         return path
     
@@ -339,11 +343,24 @@ class ImageUtils:
         return total
     
     def _calculate_materia_screenshot_height(self, materia_list: list) -> int:
-        """计算材料列表截图高度"""
+        """计算材料列表截图高度
+        
+        注意：当材料很多且分成多列时，每列的材料数量会减少，
+        所以高度应该基于单列最多的材料数量来计算
+        """
+        # 如果材料超过100个，按每列100个计算高度
+        items_per_column = 100
+        material_count = len(materia_list)
+        
+        # 计算每列最多的材料数量
+        items_in_tallest_column = min(material_count, items_per_column)
+        
+        # 只统计单列材料的高度
         single_location_count = 0
         multi_location_height = 0
         
-        for materia in materia_list:
+        # 只遍历第一列的材料来计算高度
+        for materia in materia_list[:items_in_tallest_column]:
             location = materia.get("location", "")
             if not location:
                 single_location_count += 1
@@ -366,19 +383,49 @@ class ImageUtils:
         total_height = base_height + content_height + multi_location_height + 1
         return max(MATERIAL_MIN_HEIGHT, int(total_height))
     
+    def _calculate_materia_screenshot_width(self, material_count: int) -> int:
+        """根据材料数量计算截图宽度
+        
+        Args:
+            material_count: 材料总数
+            
+        Returns:
+            int: 计算出的宽度
+        """
+        # 每100个材料一列，每列宽度约1200px
+        items_per_column = 100
+        column_width = 1200
+        
+        num_columns = (material_count + items_per_column - 1) // items_per_column
+        
+        # 单列时使用默认宽度，多列时增加宽度
+        if num_columns <= 1:
+            return SCREENSHOT_WIDTH
+        else:
+            # 多列时，宽度 = 列数 * 每列宽度 + 额外边距
+            return num_columns * column_width + 100
+    
     # ==================== 截图方法 ====================
     
-    async def _take_screenshot(self, html_content: str, height: int, filename: str) -> str:
+    async def _take_screenshot(self, html_content: str, height: int, filename: str, width: int = SCREENSHOT_WIDTH, full_page: bool = False) -> str:
         """使用 playwright 截图（统一截图方法）"""
         path = os.path.join(self.output, filename)
         # 创建临时 HTML 文件以支持本地资源加载
         temp_html_path = os.path.join(self.output, f'temp_{filename}.html')
 
         await self.browser_manager.ensure_browser()
+        # 设置 viewport
+        viewport_height = 2000 if full_page else height
         page = await self.browser_manager.browser.new_page(viewport={
-            'width': SCREENSHOT_WIDTH,
-            'height': height
+            'width': width,
+            'height': viewport_height
         })
+        
+        # 根据图片大小动态计算超时时间（宽度越大，超时时间越长）
+        # 基础超时30秒，每增加1200px宽度增加30秒
+        timeout = 30000 + (width // 1200) * 30000
+        # 设置页面超时
+        page.set_default_timeout(timeout)
         
         try:
             # 将 HTML 写入临时文件
@@ -388,8 +435,9 @@ class ImageUtils:
             # 使用跨平台路径转换函数构建 file:// URL
             file_url = path_to_file_url(temp_html_path)
             
-            await page.goto(file_url, wait_until='load')
-            await page.screenshot(path=path, full_page=False)
+            await page.goto(file_url, wait_until='load', timeout=timeout)
+            # 根据参数决定是否使用全页截图
+            await page.screenshot(path=path, full_page=full_page, timeout=timeout)
         finally:
             await page.close()
             # 删除临时 HTML 文件
