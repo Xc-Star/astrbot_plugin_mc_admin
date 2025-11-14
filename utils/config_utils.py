@@ -33,6 +33,9 @@ class ConfigUtils:
         # 是否开启自定义背景图
         self.enable_background_image = config.get('enable_background_image')
 
+        # 是否开启task大图
+        self.enable_big_task_image = config.get('enable_big_task_image')
+
         # 背景图文件夹路径
         self.background_image_path = None
         if config.get('background_image_path') == '' or config.get('background_image_path') is None:

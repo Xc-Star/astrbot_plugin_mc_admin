@@ -70,6 +70,7 @@ class ImageUtils:
     def __init__(self, config_utils: ConfigUtils):
         # 先保存配置工具供后续使用
         self.config_utils = config_utils
+        self.enable_big_task_image = config_utils.enable_big_task_image
         self.output = os.path.join(self.config_utils.get_plugin_path(), "data")
         # 模板目录定位到插件根目录下的 template
         self.template_dir = os.path.join(self.config_utils.get_plugin_path(), 'template')
@@ -112,8 +113,14 @@ class ImageUtils:
         
         return path
     
-    async def generate_materia_image(self, task_data: dict, materia_list: list, filename: str = 'task.png') -> str:
+    async def generate_materia_image(self, task_data: dict, materia_list: list, filename: str = 'task.png', use_big_image: bool = True) -> str:
         """生成材料列表图片
+
+        Args:
+            task_data: 任务数据
+            materia_list: 材料列表
+            filename: 输出文件名
+            use_big_image: 是否使用大图模式（并列显示多列），默认为 True
 
         Returns:
             str: 生成的图片文件路径
@@ -121,19 +128,20 @@ class ImageUtils:
         # 准备数据
         task_data_with_materia = task_data.copy()
         task_data_with_materia['materia_list'] = self._process_materia_list(materia_list)
+        task_data_with_materia['use_big_image'] = use_big_image
 
         # 计算截图高度
-        height = self._calculate_materia_screenshot_height(task_data_with_materia['materia_list'])
+        height = self._calculate_materia_screenshot_height(task_data_with_materia['materia_list'], use_big_image)
         
-        # 计算截图宽度（根据材料数量）
+        # 计算截图宽度（根据材料数量和模式）
         material_count = len(task_data_with_materia['materia_list'])
-        width = self._calculate_materia_screenshot_width(material_count)
+        width = self._calculate_materia_screenshot_width(material_count, use_big_image)
 
         # 渲染 HTML 模板
         html_content = self.render_materia_template(task_data_with_materia)
 
-        # 截图
-        path = await self._take_screenshot(html_content, height, filename, width, full_page=True)
+        # 截图（大图模式使用 full_page=True，传统模式使用 full_page=False）
+        path = await self._take_screenshot(html_content, height, filename, width, full_page=use_big_image)
 
         return path
     
@@ -342,14 +350,18 @@ class ImageUtils:
             total += len(data.get('bot_players', []))
         return total
     
-    def _calculate_materia_screenshot_height(self, materia_list: list) -> int:
+    def _calculate_materia_screenshot_height(self, materia_list: list, use_big_image: bool = True) -> int:
         """计算材料列表截图高度
         
+        Args:
+            materia_list: 材料列表
+            use_big_image: 是否使用大图模式
+            
         注意：当材料很多且分成多列时，每列的材料数量会减少，
         所以高度应该基于单列最多的材料数量来计算
         """
-        # 如果材料超过100个，按每列100个计算高度
-        items_per_column = 100
+        # 根据模式决定每列材料数量
+        items_per_column = 100 if use_big_image else 200
         material_count = len(materia_list)
         
         # 计算每列最多的材料数量
@@ -383,27 +395,32 @@ class ImageUtils:
         total_height = base_height + content_height + multi_location_height + 1
         return max(MATERIAL_MIN_HEIGHT, int(total_height))
     
-    def _calculate_materia_screenshot_width(self, material_count: int) -> int:
+    def _calculate_materia_screenshot_width(self, material_count: int, use_big_image: bool = True) -> int:
         """根据材料数量计算截图宽度
         
         Args:
             material_count: 材料总数
+            use_big_image: 是否使用大图模式
             
         Returns:
             int: 计算出的宽度
         """
-        # 每100个材料一列，每列宽度约1200px
-        items_per_column = 100
-        column_width = 1200
-        
-        num_columns = (material_count + items_per_column - 1) // items_per_column
-        
-        # 单列时使用默认宽度，多列时增加宽度
-        if num_columns <= 1:
-            return SCREENSHOT_WIDTH
+        if use_big_image:
+            # 大图模式：每100个材料一列，每列宽度约1200px
+            items_per_column = 100
+            column_width = 1200
+            
+            num_columns = (material_count + items_per_column - 1) // items_per_column
+            
+            # 单列时使用默认宽度，多列时增加宽度
+            if num_columns <= 1:
+                return SCREENSHOT_WIDTH
+            else:
+                # 多列时，宽度 = 列数 * 每列宽度 + 额外边距
+                return num_columns * column_width + 100
         else:
-            # 多列时，宽度 = 列数 * 每列宽度 + 额外边距
-            return num_columns * column_width + 100
+            # 传统模式：单列显示，固定宽度
+            return SCREENSHOT_WIDTH
     
     # ==================== 截图方法 ====================
     

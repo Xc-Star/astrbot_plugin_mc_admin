@@ -238,8 +238,8 @@
             </div>
 
             <div class="materials-grid">
-                {% set items_per_column = 100 %}
-                {% set num_columns = ((data.materia_list|length + items_per_column - 1) // items_per_column) %}
+                {% set items_per_column = 100 if data.use_big_image else 200 %}
+                {% set num_columns = ((data.materia_list|length + items_per_column - 1) // items_per_column) if data.use_big_image else 1 %}
                 
                 {% for col in range(num_columns) %}
                 <div class="material-column">

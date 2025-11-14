@@ -475,8 +475,33 @@ class CommandUtils:
             return {"type": "text", "msg": f"没找到{task_name}喵~"}
         
         materia = self.task_utils.get_material_list_by_task_id(task['msg'][0][0])
-        url = await self.task_utils.render(task["msg"], materia['msg'])
-        return {"type": "image", "msg": url}
+        material_list = materia['msg']
+        material_count = len(material_list)
+        
+        # 根据配置决定生成方式
+        if self.config_utils.enable_big_task_image:
+            # 生成一张大图，所有列并列显示
+            url = await self.task_utils.render(task["msg"], material_list, use_big_image=True)
+            return {"type": "image", "msg": url}
+        else:
+            # 生成多张图片，每200种材料一张
+            if material_count <= 200:
+                # 200种材料或更少，返回单张图片
+                url = await self.task_utils.render(task["msg"], material_list, use_big_image=False)
+                return {"type": "image", "msg": url}
+            else:
+                # 超过200种材料，每200种分割成一张图片
+                image_urls = []
+                # 每200种材料生成一张图片
+                for idx, i in enumerate(range(0, material_count, 200), start=1):
+                    chunk = material_list[i:i + 200]
+                    # 为每张图片生成唯一的文件名
+                    filename = f'task_{idx}.png'
+                    url = await self.task_utils.render(task["msg"], chunk, filename=filename, use_big_image=False)
+                    image_urls.append(url)
+                
+                # 返回图片列表
+                return {"type": "image_list", "msg": image_urls}
     
     def _create_task_cache(self,
                            task_temp: TTLCache,

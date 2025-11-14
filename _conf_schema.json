@@ -40,5 +40,11 @@
         "type": "bool",
         "hint": "开启后发送 /原图 即可获取上一次list的的背景图",
         "default": false
+    },
+    "enable_big_task_image": {
+        "description": "task列表是否为大图",
+        "type": "bool",
+        "hint": "开启后多种类材料的工程将会将所有材料集成到一张图里面",
+        "default": false
     }
 }

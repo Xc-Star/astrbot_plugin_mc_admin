@@ -129,20 +129,21 @@ class TaskUtils:
             return {"code": 500, "msg": f"没找到{name}喵~"}
 
     def get_material_list_by_task_id(self, task_id) -> dict:
-        sql = f"select * from material where task_id = {task_id}"
-        sql_res = self.conn.execute(sql).fetchall()
+        sql = "SELECT * FROM material WHERE task_id = ?"
+        sql_res = self.conn.execute(sql, (task_id,)).fetchall()
         if sql_res:
             return {"code": 200, "msg": sql_res}
         else:
             return {"code": 500, "msg": f"没找到材料喵~"}
 
-    async def render(self, task, materia_list, filename='task.png'):
+    async def render(self, task, materia_list, filename='task.png', use_big_image=True):
         """渲染任务材料列表图片
 
         Args:
             task: 任务数据
             materia_list: 材料列表
             filename: 输出文件名，默认为 'task.png'
+            use_big_image: 是否使用大图模式（并列显示多列），默认为 True
 
         Returns:
             str: 生成的图片文件路径
@@ -160,7 +161,8 @@ class TaskUtils:
         path = await self.image_utils.generate_materia_image(
             task_data=task_data,
             materia_list=materia_list,
-            filename=filename
+            filename=filename,
+            use_big_image=use_big_image
         )
         
         return path

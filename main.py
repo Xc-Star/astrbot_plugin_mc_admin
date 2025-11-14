@@ -14,7 +14,7 @@ from cachetools import TTLCache
     "astrbot_plugin_mc_admin",
     "Xc_Star",
     "这是 MC服务器 的管理插件，支持list，珍珠炮落点计算，服务器工程坐标，备货清单，白名单管理等功能",
-    "0.4.5",
+    "0.4.6",
     "https://github.com/Xc-Star/astrbot_plugin_mc_admin"
 )
 class McAdminPlugin(Star):
@@ -78,8 +78,7 @@ class McAdminPlugin(Star):
             logger.error(f"安装 Playwright Chromium 时出错: {install_error}")
             logger.error("请手动执行: playwright install chromium")
 
-
-    @filter.command("test")
+    # @filter.command("test")
     async def test(self, event: AstrMessageEvent):
         logger.info(self.config)
         msg = f"keys：{str(list(self.task_temp.keys()))},values：{str(list(self.task_temp.values()))}"
