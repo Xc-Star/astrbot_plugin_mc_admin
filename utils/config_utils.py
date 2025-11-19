@@ -47,7 +47,7 @@ class ConfigUtils:
         else:
             self.background_image_path = config.get('background_image_path')
 
-    def get_server_list(self):
+    def get_server_list(self) -> list[dict]:
         """获取服务器列表"""
         return self.server_list
 

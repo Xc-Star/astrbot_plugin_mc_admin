@@ -20,7 +20,7 @@
     "enable_whitelist_compare": {
         "description": "list命令是否开启白名单对比",
         "type": "bool",
-        "hint": "开启之后不会使用前缀区别假人",
+        "hint": "开启之后会使用前缀 + 白名单区别假人",
         "default": false
     },
     "enable_background_image": {

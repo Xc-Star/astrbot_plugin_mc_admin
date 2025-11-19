@@ -28,6 +28,7 @@ from ..media.image import ImageUtils
 from ..message import MessageUtils
 from ..rcon.pool import get_rcon_pool
 from ..task import TaskUtils
+from ..whitelist.main import WhitelistUtils
 
 
 # ==================== 类型定义 ====================
@@ -68,6 +69,9 @@ class CommandUtils:
         # 服务器与连接池
         self.servers = self.config_utils.get_server_list()
         self.rcon_pool = get_rcon_pool()
+
+        # 白名单工具
+        self.whitelist_utils = WhitelistUtils(conn, self.servers, self.rcon_pool, self.config_utils.get_bot_prefix())
         
         # 常量
         self.PERMISSION_DENIED = PERMISSION_DENIED
@@ -114,8 +118,14 @@ class CommandUtils:
 
             # 根据配置选择分类方式
             if self.config_utils.enable_whitelist_compare:
-                wl = await get_whitelist(self.rcon_pool, server)
-                bot_players, real_players = split_players_by_whitelist(players, wl)
+                # 使用白名单工具判断是否为真人玩家
+                bot_players: List[str] = []
+                real_players: List[str] = []
+                for p in players:
+                    if await self.whitelist_utils.is_real_player(p):
+                        real_players.append(p)
+                    else:
+                        bot_players.append(p)
             else:
                 bot_players, real_players = split_players_by_prefix(players, bot_prefix)
             
@@ -174,7 +184,12 @@ class CommandUtils:
 
         # 白名单添加/移除操作
         if arr[1] in ('add', 'remove'):
-            return await self._handle_wl_operation(arr[1], arr[2])
+            # return await self._handle_wl_operation(arr[1], arr[2])
+            success, message = await self.whitelist_utils.operation_whitelist(arr[1], arr[2])
+            if success:
+                return message
+            else:
+                return message
         
         return '未知错误喵~'
     
@@ -198,17 +213,17 @@ class CommandUtils:
             return '\n'.join(aggregated)
         return '没有白名单喵~' if not had_error else '服务器连接失败喵~'
     
-    async def _handle_wl_operation(self, operation: str, player_name: str) -> str:
-        """处理白名单添加/移除操作"""
-        async def do_op(server: Dict):
-            try:
-                await send_command(self.rcon_pool, server, f'whitelist {operation} {player_name}')
-            except Exception:
-                pass
-        
-        await asyncio.gather(*[do_op(s) for s in self.servers], return_exceptions=True)
-        method = '添加到' if operation == 'add' else '移除'
-        return f'已将{player_name}{method}白名单喵~'
+    # async def _handle_wl_operation(self, operation: str, player_name: str) -> str:
+    #     """处理白名单添加/移除操作"""
+    #     async def do_op(server: Dict):
+    #         try:
+    #             await send_command(self.rcon_pool, server, f'whitelist {operation} {player_name}')
+    #         except Exception:
+    #             pass
+    #
+    #     await asyncio.gather(*[do_op(s) for s in self.servers], return_exceptions=True)
+    #     method = '添加到' if operation == 'add' else '移除'
+    #     return f'已将{player_name}{method}白名单喵~'
 
     # ==================== 位置管理 ====================
     async def loc(self, msg: str, event: AstrMessageEvent) -> str:

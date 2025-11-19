@@ -74,41 +74,6 @@ class TaskUtils:
             return f"把{name}删掉了喵~"
         return f"呜哇！报错了喵！\n{error}"
 
-    def commit_task(self, parts, event: AstrMessageEvent):
-        """提交任务材料（旧版兼容方法）"""
-        task_name = parts[2]
-        material_index = int(parts[3]) - 1
-        progress = int(parts[4])
-        location = parts[5]
-        
-        task = self.get_task_by_name(task_name)
-        if task["code"] != 200:
-            return f"没找到{task_name}喵~"
-            
-        try:
-            materia_list = json.loads(task['msg'][0][5])
-            if len(materia_list) <= material_index:
-                return f"没找到{task_name}的{parts[3]}号材料喵~"
-                
-            materia = materia_list[material_index]
-            materia["progress"] = progress
-            materia["location"] = location
-            materia["PersonInCharge"] = event.message_obj.sender.nickname
-            materia_list[material_index] = materia
-            
-            operations = [
-                ("UPDATE task SET MaterialList = ? WHERE name = ?", 
-                 (json.dumps(materia_list, ensure_ascii=False), task_name))
-            ]
-            
-            success, error = self._execute_sql_with_transaction(operations)
-            if success:
-                return "收到啦！谢谢喵~"
-            return f"呜哇！报错了喵！"
-        except (json.JSONDecodeError, ValueError, IndexError) as e:
-            logger.error(f"提交任务材料失败: {e}")
-            return f"呜哇！报错了喵！"
-
     def get_task_list(self):
         sql = "select name from task"
         sql_res = self.conn.execute(sql).fetchall()

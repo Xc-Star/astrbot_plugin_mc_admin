@@ -43,9 +43,16 @@ class DbUtils:
               "end" TEXT
             );
             '''
+            create_table_user_profile = '''
+            CREATE TABLE IF NOT EXISTS "user_profile" (
+              "username" TEXT,
+              "uuid" TEXT
+            );
+            '''
             cur.execute(create_tableL_task_sql)
             cur.execute(create_tableL_material_sql)
             cur.execute(create_table_location_sql)
+            cur.execute(create_table_user_profile)
         except:
             logger.error('数据库创建失败')
 
