@@ -85,6 +85,15 @@ class CommandUtils:
             command = ' '.join(parts[1:])
             return await self.wl(command, event)
 
+        if msg.startswith('mc reset'):
+            if not event.is_admin():
+                return self.PERMISSION_DENIED
+            parts = msg.split()
+            command = ' '.join(parts[2:])
+            if command == 'wldb':
+                await self.whitelist_utils.initialize()
+                return '白名单数据库重载成功喵~'
+
         arr = msg.split(' ')
 
         # mc command <服务器> <命令...>

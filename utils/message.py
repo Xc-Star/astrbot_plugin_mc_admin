@@ -7,6 +7,7 @@ HELP_MESSAGE = """
 /task 查看当前工程
 /mc wl add/remove <ID> 给玩家添加/移除白名单(管理员)
 /mc command <服务器名字> <command> 向指定服务器发送命令(管理员)
+/mc reset wldb 重载数据库的白名单数据
 """
 
 LOC_HELP_MESSAGE = """

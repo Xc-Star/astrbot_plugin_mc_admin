@@ -5,7 +5,7 @@
 ## 插件信息
 - 插件名称：astrbot_plugin_mc_admin
 - 作者：Xc_Star
-- 版本：0.4.7
+- 版本：0.4.8
 - 仓库地址：[https://github.com/Xc-Star/astrbot_plugin_mc_admin](https://github.com/Xc-Star/astrbot_plugin_mc_admin)
 
 ## 用前提醒
@@ -71,6 +71,11 @@ PS: 如果遇到上传投影材料的时候报错提示**packetBackend**不可�
 查看白名单：
 ```
 /mc wl list
+```
+
+白名单比对出现大量不符可以使用此命令重置数据库：
+```
+/mc reset wldb
 ```
 
 #### 向服务器发送命令
