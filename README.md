@@ -5,7 +5,7 @@
 ## 插件信息
 - 插件名称：astrbot_plugin_mc_admin
 - 作者：Xc_Star
-- 版本：0.4.8
+- 版本：0.4.9
 - 仓库地址：[https://github.com/Xc-Star/astrbot_plugin_mc_admin](https://github.com/Xc-Star/astrbot_plugin_mc_admin)
 
 ## 用前提醒
@@ -16,6 +16,8 @@
 如果下载成功后插件管理没有显示当前插件，可以尝试重启Astrbot
 
 PS: 如果遇到上传投影材料的时候报错提示**packetBackend**不可用，请根据提示的网址检查NapCatQQ的版本，以及是否启用packetBackend。如果都正常请尝试重启。
+
+给个Star，给个Star，给个Star球球了
 
 ## 功能说明
 
