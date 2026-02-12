@@ -26,7 +26,6 @@ from ..loc.main import LocUtils
 from ..loc.vo import Loc
 from ..media.image import ImageUtils
 from ..message import MessageUtils
-from ..rcon.pool import get_rcon_pool
 from ..task import TaskUtils
 from ..whitelist.main import WhitelistUtils
 
@@ -68,10 +67,9 @@ class CommandUtils:
         
         # 服务器与连接池
         self.servers = self.config_utils.get_server_list()
-        self.rcon_pool = get_rcon_pool()
 
         # 白名单工具
-        self.whitelist_utils = WhitelistUtils(conn, self.servers, self.rcon_pool, self.config_utils.get_bot_prefix())
+        self.whitelist_utils = WhitelistUtils(conn, self.servers, self.config_utils.get_bot_prefix())
         
         # 常量
         self.PERMISSION_DENIED = PERMISSION_DENIED
@@ -105,7 +103,7 @@ class CommandUtils:
                 return "找不到服务器喵~"
             match = MC_COMMAND_RE.match(msg)
             command = match.group(1) if match else ''
-            return await send_command(self.rcon_pool, server, command)
+            return await send_command(server, command)
 
         return self.message.get_help_message()
 
@@ -117,7 +115,7 @@ class CommandUtils:
         async def process_server(server: Dict) -> Optional[Tuple[str, Dict[str, List[str]]]]:
             """处理单个服务器的玩家列表"""
             try:
-                res = await send_command(self.rcon_pool, server, "list")
+                res = await send_command(server, "list")
             except Exception:
                 return None
             
@@ -205,28 +203,18 @@ class CommandUtils:
     async def _handle_wl_list(self) -> str:
         """处理白名单列表查询"""
         aggregated: List[str] = []
-        had_error = False
-        
-        for server in self.servers:
-            try:
-                wl_list = await get_whitelist(self.rcon_pool, server)
-                if wl_list:
-                    aggregated.extend(wl_list)
-            except Exception:
-                had_error = True
-                continue
-        
-        # 去重并排序
-        aggregated = sorted(set(aggregated))
-        if aggregated:
-            return '\n'.join(aggregated)
-        return '没有白名单喵~' if not had_error else '服务器连接失败喵~'
+
+        wl_list = await get_whitelist(self.servers)
+        if len(wl_list) == 0:
+            return '没有白名单喵~'
+
+        return '\n'.join(wl_list)
     
     # async def _handle_wl_operation(self, operation: str, player_name: str) -> str:
     #     """处理白名单添加/移除操作"""
     #     async def do_op(server: Dict):
     #         try:
-    #             await send_command(self.rcon_pool, server, f'whitelist {operation} {player_name}')
+    #             await send_command(server, f'whitelist {operation} {player_name}')
     #         except Exception:
     #             pass
     #

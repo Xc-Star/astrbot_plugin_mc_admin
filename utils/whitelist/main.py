@@ -8,22 +8,20 @@ from astrbot.core import logger
 from ..command.helpers import (
     get_whitelist, send_command,
 )
-from ..rcon import RconPool
 
 # 常量定义
 MOJANG_PROFILES_API = "https://api.mojang.com/profiles/minecraft"
 MOJANG_USER_API = "https://api.mojang.com/users/profiles/minecraft"
-HISTORY_ID_API = "https://uapis.cn/api/mchistoryid"
+HISTORY_ID_API = "https://uapis.cn//api/v1/game/minecraft/historyid"
 BATCH_SIZE = 10
 REQUEST_TIMEOUT = 10
 
 
 class WhitelistUtils:
 
-    def __init__(self, conn: sqlite3.Connection, servers: list[dict], rcon_pool: RconPool, bot_prefix: str):
+    def __init__(self, conn: sqlite3.Connection, servers: list[dict], bot_prefix: str):
         self.conn = conn
         self.servers = servers
-        self.rcon_pool = rcon_pool
         self.bot_prefix = bot_prefix
         
         # 查询user_profile表是否有数据
@@ -149,8 +147,8 @@ class WhitelistUtils:
             cursor.execute("DELETE FROM user_profile")
 
             # 获取服务器内白名单
-            whitelist = await get_whitelist(self.rcon_pool, self.servers[0]) or []
-            if not whitelist:
+            whitelist = await get_whitelist(self.servers)
+            if len(whitelist) == 0:
                 self.conn.commit()
                 logger.info("白名单为空，跳过初始化")
                 return
@@ -207,7 +205,7 @@ class WhitelistUtils:
             return False
         
         uuid = data.get("id")
-        # 检查UUID是否已存在
+        # 检查UUID是否已存在数据库
         existing_user = self._get_user_by_uuid(uuid)
         if existing_user:
             # 更新用户名
@@ -248,7 +246,7 @@ class WhitelistUtils:
             return True
 
         # 检查服务器白名单（防止在游戏内添加白名单，没有存在数据库里）
-        whitelist_list = await get_whitelist(self.rcon_pool, self.servers[0]) or []
+        whitelist_list = await get_whitelist(self.servers)
         if username in whitelist_list:
             if await self._sync_whitelist_user_to_db(username):
                 return True
@@ -272,7 +270,7 @@ class WhitelistUtils:
         """在所有服务器上执行白名单命令"""
         async def do_op(server: Dict):
             try:
-                await send_command(self.rcon_pool, server, f'whitelist {operation} {username}')
+                await send_command(server, f'whitelist {operation} {username}')
             except Exception:
                 pass
         

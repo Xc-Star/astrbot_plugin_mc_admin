@@ -5,7 +5,6 @@ from astrbot.api.star import Context, Star, register
 from astrbot.api import logger
 from astrbot.core import AstrBotConfig
 from .utils.command.main import CommandUtils
-from .utils.rcon.pool import close_rcon_pool
 from .utils.decorators import in_enabled_groups, requires_enabled
 from .utils.db import DbUtils
 from cachetools import TTLCache
@@ -14,7 +13,7 @@ from cachetools import TTLCache
     "astrbot_plugin_mc_admin",
     "Xc_Star",
     "这是 MC服务器 的管理插件，支持list，珍珠炮落点计算，服务器工程坐标，备货清单，白名单管理等功能",
-    "0.4.9",
+    "0.4.10",
     "https://github.com/Xc-Star/astrbot_plugin_mc_admin"
 )
 class McAdminPlugin(Star):
@@ -139,7 +138,5 @@ class McAdminPlugin(Star):
         """可选择实现异步的插件销毁方法，当插件被卸载/停用时会调用。"""
         # 关闭 browser 实例（使用 ImageUtils 的，TaskUtils 只是转发）
         await self.command_utils.image_utils.close_browser()
-        # 关闭Rcon连接池
-        close_rcon_pool()
         # 关闭数据库连接
         self.db_util.close()

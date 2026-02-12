@@ -1,4 +1,4 @@
-mcrcon
+rcon
 cachetools
 numpy
 playwright

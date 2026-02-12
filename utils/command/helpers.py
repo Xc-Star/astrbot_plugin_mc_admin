@@ -1,6 +1,8 @@
 import re
+from ..rcon import rcon_send
 from typing import Optional, List, Dict, Tuple
 from astrbot.api import logger
+from rcon.exceptions import EmptyResponse
 
 
 # 常量
@@ -20,11 +22,11 @@ def find_server_by_name(servers: List[Dict], name: str) -> Optional[Dict]:
     return None
 
 
-async def send_command(rcon_pool, server: Dict, command: str) -> str:
+async def send_command(server: Dict, command: str) -> str:
     """发送命令"""
-    return await rcon_pool.send_command(
+    return await rcon_send(
         host=server["host"],
-        password=server["password"],
+        passwd=server["password"],
         port=int(server["port"]),
         command=command
     )
@@ -43,14 +45,20 @@ def parse_list_players(res: str) -> List[str]:
         return []
 
 
-async def get_whitelist(rcon_pool, server: Dict) -> List[str]:
+async def get_whitelist(servers: List[Dict]) -> List[str]:
     """获取白名单"""
-    try:
-        wl = await send_command(rcon_pool, server, 'whitelist list')
-    except Exception as e:
-        logger.error(f"服务器 {server['name']} 白名单查询失败: {e}")
-        return []
-    if wl == 'There are no whitelisted players':
+    wl = None
+    for server in servers:
+        try:
+            wl = await send_command(server, 'whitelist list')
+            break
+        except EmptyResponse:
+            logger.error(f"服务器 {server['name']} 连接失败，请检查配置是否正确，并且检查服务器是否已开启RCON服务")
+            continue
+        except Exception as e:
+            logger.error(f"服务器 {server['name']} 白名单查询失败: {e}")
+            continue
+    if wl == 'There are no whitelisted players' or wl is None:
         return []
     players_start = wl.find(':') + 1
     players_str = wl[players_start:].strip()

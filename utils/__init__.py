@@ -1,4 +1,3 @@
-from .rcon.main import Rcon
 from .command.main import CommandUtils
 from .message import MessageUtils
 from .config_utils import ConfigUtils
@@ -21,7 +20,6 @@ from .command.helpers import (
 )
 
 __all__ = [
-    "Rcon",
     "CommandUtils",
     "MessageUtils",
     "ConfigUtils",
