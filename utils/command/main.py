@@ -586,3 +586,6 @@ class CommandUtils:
     def get_image(self) -> str:
         """获取最后生成的图片路径"""
         return self.image_utils.get_last_image()
+
+    def get_random_image(self):
+        return self.image_utils.get_random_background_image()

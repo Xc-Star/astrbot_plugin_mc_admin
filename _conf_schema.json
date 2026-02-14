@@ -29,16 +29,22 @@
         "hint": "",
         "default": true
     },
+    "enable_background_image_random": {
+        "description": "是否开启抽卡功能",
+        "type": "bool",
+        "hint": "从背景图文件夹中随机获取一张图片，默认关闭，防止变成涩图群",
+        "default": false
+    },
     "background_image_path": {
         "description": "背景图文件夹路径",
         "type": "string",
         "hint": "会从这个文件夹里面随机选择一张图片作为背景图，默认路径为'~/astrbot_plugin_mc_admin/data/background_image'",
         "default": ""
     },
-    "enable_get_image": {
+    "enable_get_last_background_image": {
         "description": "开启获取原图",
         "type": "bool",
-        "hint": "开启后发送 /原图 即可获取上一次list的的背景图",
+        "hint": "开启后发送 /原图 即可获取上一次list的的背景图,默认关闭，防止变成涩图群",
         "default": false
     },
     "enable_big_task_image": {
