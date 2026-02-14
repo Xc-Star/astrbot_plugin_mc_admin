@@ -12,7 +12,7 @@ from ..command.helpers import (
 # 常量定义
 MOJANG_PROFILES_API = "https://api.mojang.com/profiles/minecraft"
 MOJANG_USER_API = "https://api.mojang.com/users/profiles/minecraft"
-HISTORY_ID_API = "https://uapis.cn//api/v1/game/minecraft/historyid"
+HISTORY_ID_API = "https://mcapi.zxqblog.cn/histroy"
 BATCH_SIZE = 10
 REQUEST_TIMEOUT = 10
 
@@ -123,19 +123,19 @@ class WhitelistUtils:
                 logger.error(f"获取用户 UUID 失败: {e}, 用户名: {username}")
                 return None
     
-    async def _fetch_history_names(self, uuid: str) -> Optional[dict]:
+    async def _fetch_history_names(self, username: str) -> Optional[dict]:
         """获取历史用户名"""
         async with aiohttp.ClientSession() as session:
             try:
                 async with session.get(
-                    f"{HISTORY_ID_API}?uuid={uuid}",
+                    f"{HISTORY_ID_API}/{username}",
                     timeout=REQUEST_TIMEOUT
                 ) as response:
                     if response.status == 200:
                         return await response.json()
                     return None
             except Exception as e:
-                logger.error(f"获取历史用户名失败: {e}, UUID: {uuid}")
+                logger.error(f"获取历史用户名失败: {e}, username: {username}")
                 return None
     
     # ==================== 业务逻辑方法 ====================
@@ -221,16 +221,16 @@ class WhitelistUtils:
             return False
         
         uuid = data.get("id")
-        history_data = await self._fetch_history_names(uuid)
-        if not history_data or not history_data.get("history"):
+        history_data = await self._fetch_history_names(username)
+        if not history_data or not history_data.get("history_names"):
             return False
         
         # 检查历史用户名是否在数据库中
-        for history in history_data.get("history", []):
-            history_name = history.get("name")
-            if history_name and self._user_exists_in_db(history_name):
+        for history in history_data.get("history_names", []):
+            # history_name = history.get("name")
+            if history and self._user_exists_in_db(history):
                 # 更新用户信息
-                self._update_user_by_history(uuid, data.get("name"), history_name)
+                self._update_user_by_history(uuid, data.get("name"), history)
                 return True
         
         return False
