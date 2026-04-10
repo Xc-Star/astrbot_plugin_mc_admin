@@ -12,12 +12,11 @@ from cachetools import TTLCache
 @register(
     "astrbot_plugin_mc_admin",
     "Xc_Star",
-    "这是 MC服务器 的管理插件，支持群组服，RCON命令，list，珍珠炮落点计算，服务器工程坐标，备货清单，白名单管理等功能",
-    "0.5.1",
+    "这是 Minecraft 服务器 的管理插件，支持群组服，RCON命令，list，珍珠炮落点计算，服务器工程坐标，备货清单，白名单管理等功能",
+    "1.0.0",
     "https://github.com/Xc-Star/astrbot_plugin_mc_admin"
 )
 class McAdminPlugin(Star):
-    # TODO: 帮助信息做张图来返回
     def __init__(self, context: Context, config: AstrBotConfig):
 
         super().__init__(context)
@@ -99,7 +98,10 @@ class McAdminPlugin(Star):
     async def loc(self, event: AstrMessageEvent):
         msg = event.message_str
         result = await self.command_utils.loc(msg, event)
-        yield event.plain_result(result)
+        if result.get("type") == "image":
+            yield event.image_result(result.get("msg"))
+        else:
+            yield event.plain_result(result.get("msg"))
 
     @filter.command("list")
     @in_enabled_groups()

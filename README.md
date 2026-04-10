@@ -5,7 +5,7 @@
 ## 插件信息
 - 插件名称：`astrbot_plugin_mc_admin`
 - 作者：`Xc_Star`
-- 当前版本：`0.5.1`
+- 当前版本：`1.0.0`
 - 仓库地址：[https://github.com/Xc-Star/astrbot_plugin_mc_admin](https://github.com/Xc-Star/astrbot_plugin_mc_admin)
 
 ## 依赖与启动提醒
@@ -15,12 +15,12 @@
 - 若上传工程材料文件时提示 `packetBackend` 不可用，请检查 NapCatQQ 版本与 `packetBackend` 配置。
 
 ## 功能概览
-- 在线玩家列表（图片返回）
+- 在线玩家列表
 - 白名单管理与白名单比对
 - RCON 命令转发
 - 工程任务与材料备货管理（支持 txt/csv/litematic）
 - 服务器坐标点管理
-- 珍珠炮落点计算（图片返回）
+- 珍珠炮落点计算
 - 背景图抽卡与原图回看（可选）
 - 按群启用（仅配置群可触发）
 
@@ -29,7 +29,7 @@
 ### 通用命令
 ```text
 /mc                               查看帮助
-/list                             查看所有服务器在线玩家（图片）
+/list                             查看所有服务器在线玩家
 /loc                              查看 loc 命令帮助
 /loc list                         查看坐标列表
 /loc add <名字> <维度> <x y z>    新增坐标
@@ -45,7 +45,7 @@
 /task add <工程名> <维度> <x y z>
 /task remove <工程名>
 /task set <旧工程名> <新工程名> <维度> <x y z>
-/task <工程名>                    查看工程材料（图片）
+/task <工程名>                    查看工程材料
 /task claim <工程名> <材料编号>    认领材料
 /task commit <工程名> <材料编号> <n个/组/盒> <位置/假人>
 ```
@@ -88,6 +88,3 @@
 - `/mc wl*`、`/mc reset*`、`/mc command*` 需要管理员权限。
 - 坐标范围限制：`X/Z` 为 `-30000000 ~ 30000000`，`Y` 为 `-64 ~ 368`。
 - `servers` 配置错误会导致相关命令无法连通 RCON。
-
-## 开发计划
-- `/mc` 帮助信息改为图片返回

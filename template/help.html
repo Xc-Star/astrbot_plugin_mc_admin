@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minecraft 插件帮助</title>
+    <style>
+        @font-face {
+            font-family: 'Jiying';
+            src: url("{{ font }}") format('truetype');
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Jiying', sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            padding: 36px;
+            color: #ffffff;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -2;
+            {{ background_image_style | safe }}
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: rgba(0, 0, 0, 0.25);
+            backdrop-filter: blur(2px);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .title {
+            text-align: center;
+            font-size: 42px;
+            font-weight: bold;
+            margin-bottom: 14px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.35);
+        }
+
+        .subtitle {
+            text-align: center;
+            font-size: 22px;
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 28px;
+        }
+
+        .panel {
+            background: rgba(255, 255, 255, 0.14);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 16px;
+            padding: 18px 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.16);
+        }
+
+        .help-row {
+            display: grid;
+            grid-template-columns: minmax(420px, 1.2fr) minmax(0, 1fr);
+            gap: 12px;
+            align-items: center;
+            min-height: 62px;
+            padding: 8px 10px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.18);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            margin-bottom: 10px;
+        }
+
+        .help-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .command {
+            font-size: 24px;
+            line-height: 1.25;
+            color: #a7f3d0;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+
+        .description {
+            font-size: 23px;
+            line-height: 1.25;
+            color: #ffffff;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="title">{{ title }}</div>
+        <!-- <div class="subtitle">共 {{ total_count }} 条常用命令</div> -->
+        <div class="panel">
+            {% for item in items %}
+                <div class="help-row">
+                    <div class="command">{{ item.command }}</div>
+                    <div class="description">{{ item.description }}</div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</body>
+</html>

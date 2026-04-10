@@ -114,7 +114,9 @@ class CommandUtils:
             send_result = await send_command(server, command)
             return {"type": "text", "msg": send_result}
 
-        return {"type": "text", "msg": self.message.get_help_message()}
+        help_data = self.message.get_help_data()
+        help_image_path = await self.image_utils.generate_help_image(help_data)
+        return {"type": "image", "msg": help_image_path}
 
     # ==================== 玩家列表 ====================
     async def list_players(self) -> str:
@@ -232,7 +234,7 @@ class CommandUtils:
     #     return f'已将{player_name}{method}白名单喵~'
 
     # ==================== 位置管理 ====================
-    async def loc(self, msg: str, event: AstrMessageEvent) -> str:
+    async def loc(self, msg: str, event: AstrMessageEvent) -> McResponse:
         """处理位置(Location)命令
         
         支持的命令格式:
@@ -251,28 +253,30 @@ class CommandUtils:
         """
         # 列出所有位置
         if msg.startswith('loc list'):
-            return self.loc_utils.list_loc()
+            return {"type": "text", "msg": self.loc_utils.list_loc()}
 
         # 添加位置
         if msg.startswith('loc add'):
-            return self._handle_loc_add(msg)
+            return {"type": "text", "msg": self._handle_loc_add(msg)}
 
         # 删除位置
         if msg.startswith('loc remove'):
             parts = msg.split(' ')
             if len(parts) != 3:
-                return "是/loc remove <项目名字>喵"
-            return self.loc_utils.remove_loc(parts[2])
+                return {"type": "text", "msg": "是/loc remove <项目名字>喵"}
+            return {"type": "text", "msg": self.loc_utils.remove_loc(parts[2])}
 
         # 修改位置
         if msg.startswith('loc set'):
-            return self._handle_loc_set(msg)
+            return {"type": "text", "msg": self._handle_loc_set(msg)}
 
         # 查看位置详情
         if msg.startswith('loc '):
-            return self._handle_loc_query(msg)
+            return {"type": "text", "msg": self._handle_loc_query(msg)}
 
-        return self.message.get_loc_help_message()
+        help_data = self.message.get_loc_help_data()
+        help_image_path = await self.image_utils.generate_help_image(help_data, filename='loc_help.png')
+        return {"type": "image", "msg": help_image_path}
     
     def _handle_loc_add(self, msg: str) -> str:
         """处理位置添加"""
@@ -389,7 +393,9 @@ class CommandUtils:
         if msg.startswith('task'):
             return await self._handle_task_query(msg)
 
-        return {"type": "text", "msg": self.message.get_task_help_message()}
+        help_data = self.message.get_task_help_data()
+        help_image_path = await self.image_utils.generate_help_image(help_data, filename='task_help.png')
+        return {"type": "image", "msg": help_image_path}
     
     def _handle_task_add(self, msg: str, event: AstrMessageEvent, task_temp: TTLCache) -> TaskResponse:
         """处理任务添加"""
@@ -487,7 +493,9 @@ class CommandUtils:
         
         # task 不带参数返回帮助
         if len(parts) != 2:
-            return {"type": "text", "msg": self.message.get_task_help_message()}
+            help_data = self.message.get_task_help_data()
+            help_image_path = await self.image_utils.generate_help_image(help_data, filename='task_help.png')
+            return {"type": "image", "msg": help_image_path}
 
         # task 带名称返回工程详情（图片）
         task_name = parts[1]
@@ -603,8 +611,17 @@ class CommandUtils:
         """
         处理计算珍珠方法
         """
-        position = msg.split(" ")
-        res = await self.pearl_calculator_util.pearl_calculator(int(position[1]), int(position[2]))
+        position = msg.split()
+        if len(position) != 3:
+            return {"type": "text", "msg": "是 /zz <X目标坐标> <Z目标坐标> 喵～"}
+
+        try:
+            x = int(position[1])
+            z = int(position[2])
+        except ValueError:
+            return {"type": "text", "msg": "是 /zz <X目标坐标> <Z目标坐标> 喵～"}
+
+        res = await self.pearl_calculator_util.pearl_calculator(x, z)
         if res.get("msg") != "success":
             return {"type": "text", "msg": res.get("msg")}
         image_path = await self.image_utils.generate_zz_image(res.get("data", {}))

@@ -34,6 +34,12 @@ WHITELIST_NAME_LINE_HEIGHT = 1.25  # 名字行高倍率
 WHITELIST_CARD_VERTICAL_PADDING = 30  # 卡片上下 padding 总和
 WHITELIST_BASE_FIXED_HEIGHT = 234  # body/title/subtitle/panel padding 固定高度
 
+# 帮助图片相关常量（help.html）
+HELP_MIN_HEIGHT = 760  # 最小高度
+HELP_ROW_BASE_HEIGHT = 70  # 每行基础高度
+HELP_ROW_EXTRA_LINE_HEIGHT = 34  # 每个额外换行高度
+HELP_FIXED_HEIGHT = 320  # 标题、说明与容器固定高度
+
 # 珍珠炮计算图片相关常量（zz.html）
 ZZ_BASE_HEIGHT = 860  # 基础高度
 ZZ_PATH_ROW_HEIGHT = 56  # 轨迹每行高度
@@ -133,6 +139,12 @@ class ImageUtils:
         players = whitelist_players or []
         html_content = self.render_whitelist_template(players)
         height = self._calculate_whitelist_screenshot_height(players)
+        return await self._take_screenshot(html_content, height, filename)
+
+    async def generate_help_image(self, help_data: dict, filename: str = 'help.png') -> str:
+        """生成帮助信息图片"""
+        html_content = self.render_help_template(help_data)
+        height = self._calculate_help_screenshot_height(help_data)
         return await self._take_screenshot(html_content, height, filename)
     
     async def generate_materia_image(self, task_data: dict, materia_list: list, filename: str = 'task.png', use_big_image: bool = True) -> str:
@@ -312,6 +324,26 @@ class ImageUtils:
         return template.render({
             "players": whitelist_players,
             "total_count": len(whitelist_players),
+            "background_image_style": background_image_style,
+            "font": font
+        })
+
+    def render_help_template(self, help_data: dict) -> str:
+        """渲染帮助 HTML 模板"""
+        templates_dir = os.path.join(self.config_utils.get_plugin_path(), "template")
+        env = Environment(loader=FileSystemLoader(templates_dir))
+        template = env.get_template("help.html")
+
+        background_image_style = self._get_background_image_style()
+        font = self.config_utils.get_font()
+
+        items = help_data.get("items", []) if help_data else []
+        title = help_data.get("title", "Minecraft 插件帮助") if help_data else "Minecraft 插件帮助"
+
+        return template.render({
+            "title": title,
+            "items": items,
+            "total_count": len(items),
             "background_image_style": background_image_style,
             "font": font
         })
@@ -559,6 +591,24 @@ class ImageUtils:
         for ch in name:
             visual_len += 2 if ord(ch) > 127 else 1
         return max(1, math.ceil(visual_len / chars_per_line))
+
+    def _calculate_help_screenshot_height(self, help_data: dict) -> int:
+        """计算帮助截图高度"""
+        items = help_data.get("items", []) if help_data else []
+        if not items:
+            return HELP_MIN_HEIGHT
+
+        content_height = HELP_FIXED_HEIGHT
+        for item in items:
+            command = item.get("command", "")
+            desc = item.get("description", "")
+            line_count = max(
+                self._estimate_name_lines(command, chars_per_line=44),
+                self._estimate_name_lines(desc, chars_per_line=34),
+            )
+            content_height += HELP_ROW_BASE_HEIGHT + max(0, line_count - 1) * HELP_ROW_EXTRA_LINE_HEIGHT
+
+        return max(HELP_MIN_HEIGHT, content_height)
     
     # ==================== 截图方法 ====================
     
