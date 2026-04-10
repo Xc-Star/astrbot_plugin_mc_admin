@@ -24,6 +24,11 @@ LIST_SERVER_HEIGHT = 360  # 每个服务器高度
 LIST_PLAYER_INCREMENT = 72  # 每5个玩家增加的高度
 LIST_MIN_HEIGHT = 900  # 最小高度
 
+# 珍珠炮计算图片相关常量（zz.html）
+ZZ_BASE_HEIGHT = 860  # 基础高度
+ZZ_PATH_ROW_HEIGHT = 56  # 轨迹每行高度
+ZZ_MIN_HEIGHT = 960  # 最小高度
+
 # 材料列表相关常量（MateriaList.html）
 MATERIAL_BASE_HEIGHT = 197  # 基础高度
 MATERIAL_ROW_HEIGHT = 72  # 单个材料行高度
@@ -144,6 +149,13 @@ class ImageUtils:
         path = await self._take_screenshot(html_content, height, filename, width, full_page=use_big_image)
 
         return path
+
+    async def generate_zz_image(self, zz_data: dict, filename: str = 'zz.png') -> str:
+        """生成珍珠炮计算结果图片"""
+        processed_data = self._process_zz_data(zz_data)
+        height = self._calculate_zz_screenshot_height(processed_data)
+        html_content = self.render_zz_template(processed_data)
+        return await self._take_screenshot(html_content, height, filename)
     
     # ==================== 模板渲染方法 ====================
     
@@ -255,6 +267,21 @@ class ImageUtils:
         })
         
         return html_content
+
+    def render_zz_template(self, zz_data: dict) -> str:
+        """渲染珍珠炮计算结果 HTML 模板"""
+        templates_dir = os.path.join(self.config_utils.get_plugin_path(), "template")
+        env = Environment(loader=FileSystemLoader(templates_dir))
+        template = env.get_template("zz.html")
+
+        background_image_style = self._get_background_image_style()
+        font = self.config_utils.get_font()
+
+        return template.render({
+            "data": zz_data,
+            "background_image_style": background_image_style,
+            "font": font
+        })
     
     def _get_material_image_url(self, material_name_id: str) -> str:
         """根据材料ID获取本地图片文件URL
@@ -321,6 +348,41 @@ class ImageUtils:
                 "location": materia[8] if materia[8] is not None else '',  # 所在位置
             })
         return res
+
+    def _process_zz_data(self, zz_data: dict) -> dict:
+        """处理珍珠炮结果数据"""
+        path_data = []
+        for point in zz_data.get("pearlPath", []):
+            path_data.append({
+                "tick": point.get("tick", 0),
+                "x": f'{point.get("x", 0):.2f}',
+                "y": f'{point.get("y", 0):.2f}',
+                "z": f'{point.get("z", 0):.2f}',
+            })
+
+        bit_items = []
+        if zz_data.get("redTNTBit"):
+            bit_items.append({"label": "红TNT Bit", "value": zz_data["redTNTBit"]})
+        if zz_data.get("blueTNTBit"):
+            bit_items.append({"label": "蓝TNT Bit", "value": zz_data["blueTNTBit"]})
+        if zz_data.get("direction_bit"):
+            bit_items.append({"label": "方向 Bit", "value": zz_data["direction_bit"]})
+
+        return {
+            "redTNT": zz_data.get("redTNT", 0),
+            "blueTNT": zz_data.get("blueTNT", 0),
+            "redTNTBit": zz_data.get("redTNTBit", ""),
+            "blueTNTBit": zz_data.get("blueTNTBit", ""),
+            "direction": zz_data.get("direction", "Unknown"),
+            "direction_bit": zz_data.get("direction_bit", ""),
+            "directionBit": zz_data.get("direction_bit", ""),
+            "calculatedTick": zz_data.get("calculatedTick", 0),
+            "calculatedCoordinates": zz_data.get("calculatedCoordinates", "-"),
+            "bit_items": bit_items,
+            "pearlPath": path_data,
+            "real_red_color": zz_data.get("real_red_color", "红色"),
+            "real_blue_color": zz_data.get("real_blue_color", "蓝色"),
+        }
 
     # ==================== 高度计算方法 ====================
     
@@ -421,6 +483,12 @@ class ImageUtils:
         else:
             # 传统模式：单列显示，固定宽度
             return SCREENSHOT_WIDTH
+
+    def _calculate_zz_screenshot_height(self, zz_data: dict) -> int:
+        """计算珍珠炮结果截图高度"""
+        path_length = len(zz_data.get("pearlPath", []))
+        content_height = ZZ_BASE_HEIGHT + (path_length * ZZ_PATH_ROW_HEIGHT)
+        return max(ZZ_MIN_HEIGHT, content_height)
     
     # ==================== 截图方法 ====================
     

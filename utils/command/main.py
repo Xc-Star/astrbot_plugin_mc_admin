@@ -28,6 +28,7 @@ from ..media.image import ImageUtils
 from ..message import MessageUtils
 from ..task import TaskUtils
 from ..whitelist.main import WhitelistUtils
+from ..pearl_calculator import PearlCalculatorUtils
 
 
 # ==================== 类型定义 ====================
@@ -64,6 +65,7 @@ class CommandUtils:
         self.image_utils = ImageUtils(self.config_utils)
         self.loc_utils = LocUtils(conn)  # 使用数据库存储
         self.task_utils = TaskUtils(self.config_utils, conn, self.image_utils)
+        self.pearl_calculator_util = PearlCalculatorUtils(config)
         
         # 服务器与连接池
         self.servers = self.config_utils.get_server_list()
@@ -589,3 +591,14 @@ class CommandUtils:
 
     def get_random_image(self):
         return self.image_utils.get_random_background_image()
+
+    async def zz(self, msg: str, event):
+        """
+        处理计算珍珠方法
+        """
+        position = msg.split(" ")
+        res = await self.pearl_calculator_util.pearl_calculator(int(position[1]), int(position[2]))
+        if res.get("msg") != "success":
+            return {"type": "text", "msg": res.get("msg")}
+        image_path = await self.image_utils.generate_zz_image(res.get("data", {}))
+        return {"type": "image", "msg": image_path}

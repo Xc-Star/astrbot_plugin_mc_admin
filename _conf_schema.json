@@ -52,5 +52,47 @@
         "type": "bool",
         "hint": "开启后多种类材料的工程将会将所有材料集成到一张图里面",
         "default": false
+    },
+    "pearl_config": {
+        "description": "珍珠炮配置",
+        "type": "string",
+        "hint": "可以通过https://去生成我们专用的配置",
+        "default": ""
+    },
+    "pearl_version": {
+        "description": "游戏版本",
+        "type": "string",
+        "hint": "实体运动计算改过两次，该配置用于适配不同版本。Legacy：1.13～1.20.4，1205：1.20.5～1.21.1，1212：1.21.2+",
+        "default": "1212"
+    },
+    "real_red_color": {
+        "description": "“红色”阵列实际的颜色",
+        "type": "string",
+        "hint": "实际实装的珍珠炮配色不一定是红蓝，这个可以方便找到对应的阵列",
+        "default": "红色"
+    },
+    "real_blue_color": {
+        "description": "“蓝色”阵列实际的颜色",
+        "type": "string",
+        "hint": "实际实装的珍珠炮配色不一定是红蓝，这个可以方便找到对应的阵列",
+        "default": "蓝色"
+    },
+    "red_bit_count": {
+        "description": "珍珠炮红色阵列TNT配置数量（可选）",
+        "type": "string",
+        "hint": "从左往右，使用英文逗号分隔。这一项配置是用于快速配置TNT数量，如红色阵列需要6个tnt，阵列配置有“1,2,4,8”，则会提示配置0110",
+        "default": ""
+    },
+    "blue_bit_count": {
+        "description": "珍珠炮蓝色阵列TNT配置数量（可选）",
+        "type": "string",
+        "hint": "从左往右，使用英文逗号分隔。这一项配置是用于快速配置TNT数量，如红色阵列需要6个tnt，阵列配置有“1,2,4,8”，则会提示配置0110",
+        "default": ""
+    },
+    "direction_bit": {
+        "description": "珍珠炮方向对应编码（可选）",
+        "type": "string",
+        "hint": "东南西北ESWN bit编码，使用英文逗号分隔。这一项配置是用于快速配置方向，如结果为South，会提示对应的方向编码",
+        "default": ""
     }
 }

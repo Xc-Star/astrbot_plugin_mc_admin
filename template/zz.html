@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minecraft 珍珠炮落点计算</title>
+    <style>
+        @font-face {
+            font-family: 'Jiying';
+            src: url("{{ font }}") format('truetype');
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Jiying', sans-serif;
+        }
+
+        body {
+            padding: 36px;
+            color: #fff;
+            margin: 0;
+            position: relative;
+            min-height: 100vh;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            z-index: -2;
+            {{ background_image_style | safe }}
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+
+        body::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            background: rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(3px);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .title {
+            text-align: center;
+            font-size: 43px;
+            font-weight: bold;
+            margin-bottom: 28px;
+            text-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+        }
+
+        .panel {
+            background: rgba(255, 255, 255, 0.14);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            border-radius: 18px;
+            backdrop-filter: blur(12px);
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.16);
+            padding: 28px;
+            margin-bottom: 24px;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 16px;
+        }
+
+        .summary-card {
+            background: rgba(255, 255, 255, 0.12);
+            border-radius: 14px;
+            padding: 18px 20px;
+            border: 1px solid rgba(255, 255, 255, 0.14);
+        }
+
+        .summary-label {
+            font-size: 18px;
+            color: rgba(255, 255, 255, 0.78);
+            margin-bottom: 10px;
+        }
+
+        .summary-value {
+            font-size: 34px;
+            font-weight: bold;
+            line-height: 1.2;
+            word-break: break-word;
+        }
+
+        .accent-red {
+            color: #ff8d8d;
+        }
+
+        .accent-blue {
+            color: #8fd0ff;
+        }
+
+        .accent-gold {
+            color: #ffd36e;
+        }
+
+        .accent-green {
+            color: #8ef0a6;
+        }
+
+        .section-title {
+            font-size: 28px;
+            margin-bottom: 16px;
+            color: rgba(255, 255, 255, 0.92);
+        }
+
+        .coordinate-box {
+            font-size: 28px;
+            line-height: 1.6;
+            word-break: break-word;
+            color: #f5f7fb;
+        }
+
+        .bit-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 14px;
+        }
+
+        .bit-card {
+            background: rgba(255, 255, 255, 0.10);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            border-radius: 14px;
+            padding: 16px 18px;
+        }
+
+        .bit-label {
+            font-size: 18px;
+            color: rgba(255, 255, 255, 0.76);
+            margin-bottom: 10px;
+        }
+
+        .bit-value {
+            font-size: 24px;
+            letter-spacing: 2px;
+            word-break: break-all;
+            color: #fff4b2;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            overflow: hidden;
+            border-radius: 12px;
+        }
+
+        thead tr {
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        th, td {
+            padding: 14px 16px;
+            text-align: left;
+            font-size: 20px;
+        }
+
+        th {
+            color: rgba(255, 255, 255, 0.86);
+            font-weight: bold;
+        }
+
+        tbody tr {
+            border-top: 1px solid rgba(255, 255, 255, 0.10);
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        tbody tr:nth-child(even) {
+            background: rgba(255, 255, 255, 0.09);
+        }
+
+        .empty {
+            text-align: center;
+            font-size: 22px;
+            color: rgba(255, 255, 255, 0.76);
+            padding: 20px 0 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="title">Minecraft 珍珠炮落点计算</div>
+
+        <div class="panel">
+            <div class="summary-grid">
+                <div class="summary-card">
+                    <div class="summary-label">{{ data.real_red_color }} TNT</div>
+                    <div class="summary-value accent-red">{{ data.redTNT }}</div>
+                    {% if data.redTNTBit %}
+                    <div class="summary-value accent-red" style="font-size: 20px;">Bit: {{ data.redTNTBit }}</div>
+                    {% endif %}
+                </div>
+                <div class="summary-card">
+                    <div class="summary-label">{{ data.real_blue_color }} TNT</div>
+                    <div class="summary-value accent-blue">{{ data.blueTNT }}</div>
+                    {% if data.blueTNTBit %}
+                    <div class="summary-value accent-blue" style="font-size: 20px;">Bit: {{ data.blueTNTBit }}</div>
+                    {% endif %}
+                </div>
+                <div class="summary-card">
+                    <div class="summary-label">方向</div>
+                    <div class="summary-value accent-gold">{{ data.direction }}</div>
+                    {% if data.directionBit %}
+                    <div class="summary-value accent-gold" style="font-size: 20px;">Bit: {{ data.directionBit }}</div>
+                    {% endif %}
+                </div>
+                <div class="summary-card">
+                    <div class="summary-label">落点 Tick</div>
+                    <div class="summary-value accent-green">{{ data.calculatedTick }}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="section-title">落点坐标</div>
+            <div class="coordinate-box">{{ data.calculatedCoordinates }}</div>
+        </div>
+
+        <div class="panel">
+            <div class="section-title">珍珠轨迹</div>
+            {% if data.pearlPath %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Tick</th>
+                        <th>X</th>
+                        <th>Y</th>
+                        <th>Z</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for point in data.pearlPath %}
+                    <tr>
+                        <td>{{ point.tick }}</td>
+                        <td>{{ point.x }}</td>
+                        <td>{{ point.y }}</td>
+                        <td>{{ point.z }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="empty">暂无轨迹数据</div>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>
