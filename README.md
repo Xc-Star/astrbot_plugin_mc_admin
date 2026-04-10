@@ -5,7 +5,7 @@
 ## 插件信息
 - 插件名称：`astrbot_plugin_mc_admin`
 - 作者：`Xc_Star`
-- 当前版本：`0.5.0`
+- 当前版本：`0.5.1`
 - 仓库地址：[https://github.com/Xc-Star/astrbot_plugin_mc_admin](https://github.com/Xc-Star/astrbot_plugin_mc_admin)
 
 ## 依赖与启动提醒
@@ -56,7 +56,7 @@
 ```text
 /mc wl add <玩家ID>               添加白名单
 /mc wl remove <玩家ID>            移除白名单
-/mc wl list                       查看白名单（当前为文本返回）
+/mc wl list                       查看白名单（图片）
 /mc reset wldb                    重载白名单数据库
 /mc command <服务器名> <命令...>   向指定服务器发送 RCON 命令
 ```
@@ -91,4 +91,3 @@
 
 ## 开发计划
 - `/mc` 帮助信息改为图片返回
-- `/mc wl list` 改为图片返回

@@ -38,6 +38,12 @@ class TaskResponse(TypedDict):
     msg: str  # 当 type 为 "image_list" 时，msg 为图片 URL 列表
 
 
+class McResponse(TypedDict):
+    """mc 命令响应结构"""
+    type: str  # "text" | "image"
+    msg: str
+
+
 # ==================== 常量定义 ====================
 # Minecraft 坐标边界
 MC_COORD_X_MIN, MC_COORD_X_MAX = -30000000, 30000000
@@ -77,7 +83,7 @@ class CommandUtils:
         self.PERMISSION_DENIED = PERMISSION_DENIED
 
     # ==================== MC 命令处理 ====================
-    async def mc(self, msg: str, event: AstrMessageEvent) -> str:
+    async def mc(self, msg: str, event: AstrMessageEvent) -> McResponse:
         """处理 MC 相关命令"""
         # 优先处理白名单命令
         if msg.startswith('mc wl'):
@@ -87,27 +93,28 @@ class CommandUtils:
 
         if msg.startswith('mc reset'):
             if not event.is_admin():
-                return self.PERMISSION_DENIED
+                return {"type": "text", "msg": self.PERMISSION_DENIED}
             parts = msg.split()
             command = ' '.join(parts[2:])
             if command == 'wldb':
                 await self.whitelist_utils.initialize()
-                return '白名单数据库重载成功喵~'
+                return {"type": "text", "msg": '白名单数据库重载成功喵~'}
 
         arr = msg.split(' ')
 
         # mc command <服务器> <命令...>
         if len(arr) >= 3 and arr[1] == 'command':
             if not event.is_admin():
-                return self.PERMISSION_DENIED
+                return {"type": "text", "msg": self.PERMISSION_DENIED}
             server = find_server_by_name(self.servers, arr[2])
             if server is None:
-                return "找不到服务器喵~"
+                return {"type": "text", "msg": "找不到服务器喵~"}
             match = MC_COMMAND_RE.match(msg)
             command = match.group(1) if match else ''
-            return await send_command(server, command)
+            send_result = await send_command(server, command)
+            return {"type": "text", "msg": send_result}
 
-        return self.message.get_help_message()
+        return {"type": "text", "msg": self.message.get_help_message()}
 
     # ==================== 玩家列表 ====================
     async def list_players(self) -> str:
@@ -176,11 +183,11 @@ class CommandUtils:
             return False, "坐标是整数喵~"
 
     # ==================== 白名单管理 ====================
-    async def wl(self, msg: str, event: AstrMessageEvent) -> str:
+    async def wl(self, msg: str, event: AstrMessageEvent) -> McResponse:
         """处理白名单命令"""
         # 权限检查
         if not event.is_admin():
-            return self.PERMISSION_DENIED
+            return {"type": "text", "msg": self.PERMISSION_DENIED}
 
         # 查询白名单列表
         if msg == 'wl list':
@@ -189,28 +196,28 @@ class CommandUtils:
         # 解析命令
         arr = msg.split(' ')
         if len(arr) != 3:
-            return self.message.get_help_message()
+            return {"type": "text", "msg": self.message.get_help_message()}
 
         # 白名单添加/移除操作
         if arr[1] in ('add', 'remove'):
             # return await self._handle_wl_operation(arr[1], arr[2])
             success, message = await self.whitelist_utils.operation_whitelist(arr[1], arr[2])
             if success:
-                return message
+                return {"type": "text", "msg": message}
             else:
-                return message
+                return {"type": "text", "msg": message}
         
-        return '未知错误喵~'
+        return {"type": "text", "msg": '未知错误喵~'}
     
-    async def _handle_wl_list(self) -> str:
+    async def _handle_wl_list(self) -> McResponse:
         """处理白名单列表查询"""
-        aggregated: List[str] = []
-
         wl_list = await get_whitelist(self.servers)
         if len(wl_list) == 0:
-            return '没有白名单喵~'
+            return {"type": "text", "msg": '没有白名单喵~'}
 
-        return '\n'.join(wl_list)
+        sorted_wl_list = sorted(wl_list, key=lambda name: name.casefold())
+        image_path = await self.image_utils.generate_whitelist_image(sorted_wl_list)
+        return {"type": "image", "msg": image_path}
     
     # async def _handle_wl_operation(self, operation: str, player_name: str) -> str:
     #     """处理白名单添加/移除操作"""

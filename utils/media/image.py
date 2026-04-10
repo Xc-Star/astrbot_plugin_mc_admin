@@ -24,6 +24,16 @@ LIST_SERVER_HEIGHT = 360  # 每个服务器高度
 LIST_PLAYER_INCREMENT = 72  # 每5个玩家增加的高度
 LIST_MIN_HEIGHT = 900  # 最小高度
 
+# 白名单图片相关常量（whitelist.html）
+WHITELIST_MIN_HEIGHT = 640  # 最小高度
+WHITELIST_COLUMNS = 3  # 每行列数
+WHITELIST_ROW_GAP = 12  # 行间距
+WHITELIST_CARD_MIN_HEIGHT = 58  # 卡片最小高度
+WHITELIST_NAME_FONT_SIZE = 24  # 名字字体大小
+WHITELIST_NAME_LINE_HEIGHT = 1.25  # 名字行高倍率
+WHITELIST_CARD_VERTICAL_PADDING = 30  # 卡片上下 padding 总和
+WHITELIST_BASE_FIXED_HEIGHT = 234  # body/title/subtitle/panel padding 固定高度
+
 # 珍珠炮计算图片相关常量（zz.html）
 ZZ_BASE_HEIGHT = 860  # 基础高度
 ZZ_PATH_ROW_HEIGHT = 56  # 轨迹每行高度
@@ -117,6 +127,13 @@ class ImageUtils:
         path = await self._take_screenshot(html_content, height, 'list.png')
         
         return path
+
+    async def generate_whitelist_image(self, whitelist_players: list[str], filename: str = 'whitelist.png') -> str:
+        """生成白名单图片（栅格布局）"""
+        players = whitelist_players or []
+        html_content = self.render_whitelist_template(players)
+        height = self._calculate_whitelist_screenshot_height(players)
+        return await self._take_screenshot(html_content, height, filename)
     
     async def generate_materia_image(self, task_data: dict, materia_list: list, filename: str = 'task.png', use_big_image: bool = True) -> str:
         """生成材料列表图片
@@ -279,6 +296,22 @@ class ImageUtils:
 
         return template.render({
             "data": zz_data,
+            "background_image_style": background_image_style,
+            "font": font
+        })
+
+    def render_whitelist_template(self, whitelist_players: list[str]) -> str:
+        """渲染白名单 HTML 模板"""
+        templates_dir = os.path.join(self.config_utils.get_plugin_path(), "template")
+        env = Environment(loader=FileSystemLoader(templates_dir))
+        template = env.get_template("whitelist.html")
+
+        background_image_style = self._get_background_image_style()
+        font = self.config_utils.get_font()
+
+        return template.render({
+            "players": whitelist_players,
+            "total_count": len(whitelist_players),
             "background_image_style": background_image_style,
             "font": font
         })
@@ -489,6 +522,43 @@ class ImageUtils:
         path_length = len(zz_data.get("pearlPath", []))
         content_height = ZZ_BASE_HEIGHT + (path_length * ZZ_PATH_ROW_HEIGHT)
         return max(ZZ_MIN_HEIGHT, content_height)
+
+    def _calculate_whitelist_screenshot_height(self, whitelist_players: list[str]) -> int:
+        """计算白名单截图高度"""
+        if not whitelist_players:
+            return WHITELIST_MIN_HEIGHT
+
+        # 每行高度取该行最长名字对应的换行高度，避免长 ID 被截断
+        rows_height = 0
+        row_count = math.ceil(len(whitelist_players) / WHITELIST_COLUMNS)
+
+        for i in range(0, len(whitelist_players), WHITELIST_COLUMNS):
+            row_players = whitelist_players[i:i + WHITELIST_COLUMNS]
+            max_lines = max(self._estimate_name_lines(name) for name in row_players)
+            text_height = math.ceil(
+                WHITELIST_NAME_FONT_SIZE * WHITELIST_NAME_LINE_HEIGHT * max_lines
+            )
+            row_height = max(
+                WHITELIST_CARD_MIN_HEIGHT,
+                text_height + WHITELIST_CARD_VERTICAL_PADDING
+            )
+            rows_height += row_height
+
+        total_height = (
+            WHITELIST_BASE_FIXED_HEIGHT
+            + rows_height
+            + max(0, row_count - 1) * WHITELIST_ROW_GAP
+        )
+        return max(WHITELIST_MIN_HEIGHT, total_height)
+
+    def _estimate_name_lines(self, name: str, chars_per_line: int = 18) -> int:
+        """估算昵称在卡片中的换行行数（中日韩字符按 2 个宽度计算）"""
+        if not name:
+            return 1
+        visual_len = 0
+        for ch in name:
+            visual_len += 2 if ord(ch) > 127 else 1
+        return max(1, math.ceil(visual_len / chars_per_line))
     
     # ==================== 截图方法 ====================
     

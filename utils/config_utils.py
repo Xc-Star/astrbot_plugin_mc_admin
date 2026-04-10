@@ -20,6 +20,8 @@ class ConfigUtils:
         self.server_list = list()
         for server in servers:
             server_info = str(server).split(':')
+            if len(server_info) < 4:
+                continue
             self.server_list.append({
                 "name": server_info[0],
                 "host": server_info[1],
