@@ -40,6 +40,9 @@ __MACOSX/
 list.png
 task.png
 task_*.png
+help.png
+loc_help.png
+zz.png
 
 # 环境变量文件
 .env

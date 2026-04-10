@@ -5,7 +5,7 @@
 ## 插件信息
 - 插件名称：`astrbot_plugin_mc_admin`
 - 作者：`Xc_Star`
-- 当前版本：`1.0.0`
+- 当前版本：`1.0.1`
 - 仓库地址：[https://github.com/Xc-Star/astrbot_plugin_mc_admin](https://github.com/Xc-Star/astrbot_plugin_mc_admin)
 
 ## 依赖与启动提醒
