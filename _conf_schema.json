@@ -56,7 +56,7 @@
     "pearl_config": {
         "description": "珍珠炮配置",
         "type": "string",
-        "hint": "可以通过https://去生成我们专用的配置",
+        "hint": "可以通过https://pearl.zxqblog.cn/去生成 or 转换为我们专用的配置",
         "default": ""
     },
     "pearl_version": {

@@ -13,7 +13,7 @@ from cachetools import TTLCache
     "astrbot_plugin_mc_admin",
     "Xc_Star",
     "这是 Minecraft 服务器 的管理插件，支持群组服，RCON命令，list，珍珠炮落点计算，服务器工程坐标，备货清单，白名单管理等功能",
-    "1.0.1",
+    "1.0.2",
     "https://github.com/Xc-Star/astrbot_plugin_mc_admin"
 )
 class McAdminPlugin(Star):
