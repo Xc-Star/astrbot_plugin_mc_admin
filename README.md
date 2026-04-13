@@ -5,7 +5,7 @@
 ## 插件信息
 - 插件名称：`astrbot_plugin_mc_admin`
 - 作者：`Xc_Star`
-- 当前版本：`1.0.2`
+- 当前版本：`1.0.3`
 - 仓库地址：[https://github.com/Xc-Star/astrbot_plugin_mc_admin](https://github.com/Xc-Star/astrbot_plugin_mc_admin)
 
 ## 依赖与启动提醒
@@ -67,24 +67,24 @@
 
 配置文件：`_conf_schema.json`
 
-| 配置项 | 类型 | 默认值 | 说明                                           |
-|---|---|---|----------------------------------------------|
-| `enabled_groups` | list | `[]` | 允许触发插件的群列表                                   |
-| `bot_prefix` | string | `bot_` | 假人前缀（白名单比对关闭时用于区分真玩家/假人）                     |
-| `servers` | list | `[]` | 服务器配置，格式：`名字:地址:端口:RCON密码`                   |
-| `enable_whitelist_compare` | bool | `false` | `/list` 是否使用白名单辅助识别真人玩家                      |
-| `enable_background_image` | bool | `true` | 是否启用列表背景图                                    |
-| `enable_background_image_random` | bool | `false` | 是否启用 `/抽卡`                                   |
-| `background_image_path` | string | `""` | 背景图目录，空时使用插件内置目录                             |
-| `enable_get_last_background_image` | bool | `false` | 是否启用 `/原图`                                   |
-| `enable_big_task_image` | bool | `false` | `/task <工程名>` 是否合并为单张大图                      |
-| `pearl_config` | string | `""` | 珍珠炮配置请使用https://pearl.zxqblog.cn生成或者解析后的配置文件 |
-| `pearl_version` | string | `1212` | 珍珠炮计算版本（`Legacy`/`1205`/`1212`）              |
-| `real_red_color` | string | `红色` | 实际红色阵列名称                                     |
-| `real_blue_color` | string | `蓝色` | 实际蓝色阵列名称                                     |
-| `red_bit_count` | string | `""` | 红色阵列 TNT 位权配置（逗号分隔）                          |
-| `blue_bit_count` | string | `""` | 蓝色阵列 TNT 位权配置（逗号分隔）                          |
-| `direction_bit` | string | `""` | 方位编码映射（ESWN，逗号分隔）                            |
+| 配置项 | 类型 | 默认值 | 说明                             |
+|---|---|---|--------------------------------|
+| `enabled_groups` | list | `[]` | 允许触发插件的群列表                     |
+| `bot_prefix` | string | `bot_` | 假人前缀（白名单比对关闭时用于区分真玩家/假人）       |
+| `servers` | list | `[]` | 服务器配置，格式：`名字:地址:端口:RCON密码`     |
+| `enable_whitelist_compare` | bool | `false` | `/list` 是否使用白名单辅助识别真人玩家        |
+| `enable_background_image` | bool | `true` | 是否启用列表背景图                      |
+| `enable_background_image_random` | bool | `false` | 是否启用 `/抽卡`                     |
+| `background_image_path` | string | `""` | 背景图目录，空时使用插件内置目录               |
+| `enable_get_last_background_image` | bool | `false` | 是否启用 `/原图`                     |
+| `enable_big_task_image` | bool | `false` | `/task <工程名>` 是否合并为单张大图        |
+| `pearl_config` | string | `""` | 珍珠炮配置请使用`https://pearl.zxqblog.cn`生成或者解析后的配置文件           |
+| `pearl_version` | string | `1212` | 珍珠炮计算版本（`Legacy`/`1205`/`1212`） |
+| `real_red_color` | string | `红色` | 实际红色阵列名称                       |
+| `real_blue_color` | string | `蓝色` | 实际蓝色阵列名称                       |
+| `red_bit_count` | string | `""` | 红色阵列 TNT 位权配置（逗号分隔）            |
+| `blue_bit_count` | string | `""` | 蓝色阵列 TNT 位权配置（逗号分隔）            |
+| `direction_bit` | string | `""` | 方位编码映射（ESWN，逗号分隔）              |
 
 ## 注意事项
 - `servers` 配置错误会导致相关命令无法连通 RCON。
