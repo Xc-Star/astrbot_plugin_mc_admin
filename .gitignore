@@ -43,6 +43,7 @@ task_*.png
 help.png
 loc_help.png
 zz.png
+status.png
 
 # 环境变量文件
 .env

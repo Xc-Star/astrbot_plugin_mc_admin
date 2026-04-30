@@ -53,9 +53,9 @@ class ConfigUtils:
         """获取服务器列表"""
         return self.server_list
 
-    def get_bot_prefix(self):
+    def get_bot_prefix(self) -> str:
         """获取假人前缀"""
-        return self.bot_prefix
+        return str(self.bot_prefix)
 
     def get_plugin_path(self):
         """获取当前插件的路径

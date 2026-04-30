@@ -106,9 +106,9 @@ class ImageUtils:
     
     # ==================== 公共方法 ====================
     
-    def get_last_image(self):
+    def get_last_image(self) -> str:
         """获取最后一次使用的背景图片路径"""
-        return self._background_image
+        return str(self._background_image)
     
     async def close_browser(self):
         """关闭 browser 实例"""
@@ -184,6 +184,20 @@ class ImageUtils:
         processed_data = self._process_zz_data(zz_data)
         height = self._calculate_zz_screenshot_height(processed_data)
         html_content = self.render_zz_template(processed_data)
+        return await self._take_screenshot(html_content, height, filename)
+
+    async def generate_status_image(self, servers_status: dict, filename: str = 'status.png') -> str:
+        """生成服务器状态图片
+
+        Args:
+            servers_status: 服务器状态字典，格式为 {server_name: is_online}
+            filename: 输出文件名
+
+        Returns:
+            str: 生成的图片文件路径
+        """
+        html_content = self.render_status_template(servers_status)
+        height = self._calculate_status_screenshot_height(servers_status)
         return await self._take_screenshot(html_content, height, filename)
     
     # ==================== 模板渲染方法 ====================
@@ -324,6 +338,21 @@ class ImageUtils:
         return template.render({
             "players": whitelist_players,
             "total_count": len(whitelist_players),
+            "background_image_style": background_image_style,
+            "font": font
+        })
+
+    def render_status_template(self, servers_status: dict) -> str:
+        """渲染服务器状态 HTML 模板"""
+        templates_dir = os.path.join(self.config_utils.get_plugin_path(), "template")
+        env = Environment(loader=FileSystemLoader(templates_dir))
+        template = env.get_template("status.html")
+
+        background_image_style = self._get_background_image_style()
+        font = self.config_utils.get_font()
+
+        return template.render({
+            "servers_status": servers_status,
             "background_image_style": background_image_style,
             "font": font
         })
@@ -548,6 +577,16 @@ class ImageUtils:
         else:
             # 传统模式：单列显示，固定宽度
             return SCREENSHOT_WIDTH
+
+    def _calculate_status_screenshot_height(self, servers_status: dict) -> int:
+        """计算服务器状态截图高度"""
+        if not servers_status:
+            return 600
+
+        server_count = len(servers_status)
+        # 每行最多3个卡片，每个卡片高度约180px，加上基础高度
+        rows = (server_count + 2) // 3
+        return max(600, 300 + rows * 200)
 
     def _calculate_zz_screenshot_height(self, zz_data: dict) -> int:
         """计算珍珠炮结果截图高度"""

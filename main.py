@@ -1,6 +1,6 @@
 import asyncio
 import sys
-from astrbot.api.event import filter, AstrMessageEvent, MessageEventResult
+from astrbot.api.event import filter, AstrMessageEvent
 from astrbot.api.star import Context, Star, register
 from astrbot.api import logger
 from astrbot.core import AstrBotConfig
@@ -9,12 +9,19 @@ from .utils.decorators import in_enabled_groups, requires_enabled
 from .utils.db import DbUtils
 from cachetools import TTLCache
 
+
+# TODO: 1. 区块回档
+# TODO: 2. 大模型自动生成命令，适配carpet
+# TODO: 3. MCDR命令
+# TODO: 4. 服群聊天
+# TODO: 5. 服务器状态监控
+# TODO: 6.
 @register(
     "astrbot_plugin_mc_admin",
     "Xc_Star",
     "这是 Minecraft 服务器 的管理插件，支持群组服，RCON命令，list，珍珠炮落点计算，服务器工程坐标，备货清单，白名单管理等功能",
-    "1.0.3",
-    "https://github.com/Xc-Star/astrbot_plugin_mc_admin"
+    "1.1.0",
+    "https://github.com/Xc-Star/astrbot_plugin_mc_admin",
 )
 class McAdminPlugin(Star):
     def __init__(self, context: Context, config: AstrBotConfig):
@@ -30,28 +37,32 @@ class McAdminPlugin(Star):
         """可选择实现异步的插件初始化方法，当实例化该插件类之后会自动调用该方法。"""
         # 检查并安装 Playwright Chromium
         await self._ensure_playwright_installed()
-    
+
     async def _ensure_playwright_installed(self):
         """确保 Playwright Chromium 已安装
-        
+
         该方法会检查并自动安装 Playwright Chromium 浏览器。
         如果已安装，会快速跳过；如果未安装，会自动执行安装命令。
         """
         logger.info("检查 Playwright Chromium 是否已安装...")
-        
+
         # 直接执行 playwright install chromium 命令
         # Playwright 会检查是否已安装，如果已安装会立即返回
         logger.warning("正在检查并安装 Playwright Chromium...")
         logger.warning("注意：如果未安装，首次安装可能需要几分钟时间，请耐心等待...")
-        
+
         try:
             # 执行 playwright install chromium 命令
             process = await asyncio.create_subprocess_exec(
-                sys.executable, "-m", "playwright", "install", "chromium",
+                sys.executable,
+                "-m",
+                "playwright",
+                "install",
+                "chromium",
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.STDOUT,
             )
-            
+
             assert process.stdout is not None
             installed = False
             async for line in process.stdout:
@@ -60,11 +71,13 @@ class McAdminPlugin(Star):
                 # 检查是否显示已安装的消息
                 if "is already installed" in output.lower() or "已经安装" in output:
                     installed = True
-            
+
             await process.wait()
-            
+
             if process.returncode != 0:
-                logger.error(f"安装 Playwright Chromium 失败，错误码: {process.returncode}")
+                logger.error(
+                    f"安装 Playwright Chromium 失败，错误码: {process.returncode}"
+                )
                 logger.error("请手动执行: playwright install chromium")
             else:
                 if installed:
@@ -82,26 +95,26 @@ class McAdminPlugin(Star):
         logger.info(self.config)
         msg = f"keys：{str(list(self.task_temp.keys()))},values：{str(list(self.task_temp.values()))}"
         yield event.plain_result(msg)
-        
+
     @filter.command("mc")
     @in_enabled_groups()
     async def mc(self, event: AstrMessageEvent):
         msg = event.message_str
         result = await self.command_utils.mc(msg, event)
-        if result.get("type") == "image":
-            yield event.image_result(result.get("msg"))
+        if result["type"] == "image":
+            yield event.image_result(result["msg"])
         else:
-            yield event.plain_result(result.get("msg"))
+            yield event.plain_result(result["msg"])
 
     @filter.command("loc")
     @in_enabled_groups()
     async def loc(self, event: AstrMessageEvent):
         msg = event.message_str
         result = await self.command_utils.loc(msg, event)
-        if result.get("type") == "image":
-            yield event.image_result(result.get("msg"))
+        if result["type"] == "image":
+            yield event.image_result(result["msg"])
         else:
-            yield event.plain_result(result.get("msg"))
+            yield event.plain_result(result["msg"])
 
     @filter.command("list")
     @in_enabled_groups()
@@ -111,20 +124,26 @@ class McAdminPlugin(Star):
 
     @filter.command("原图")
     @in_enabled_groups()
-    @requires_enabled("enable_get_last_background_image", "获取原图功能暂未启用", allow_admin_bypass=True)
+    @requires_enabled(
+        "enable_get_last_background_image",
+        "获取原图功能暂未启用",
+        allow_admin_bypass=True,
+    )
     async def get_background_image(self, event: AstrMessageEvent):
         yield event.image_result(self.command_utils.get_image())
 
     @filter.command("抽卡")
     @in_enabled_groups()
-    @requires_enabled("enable_background_image_random", "抽卡功能暂未启用", allow_admin_bypass=True)
+    @requires_enabled(
+        "enable_background_image_random", "抽卡功能暂未启用", allow_admin_bypass=True
+    )
     async def get_random_image(self, event: AstrMessageEvent):
         yield event.image_result(self.command_utils.get_random_image())
 
     @filter.event_message_type(filter.EventMessageType.ALL)
     @in_enabled_groups()
     async def on_all_message(self, event: AstrMessageEvent):
-        if f'{event.get_group_id()}_{event.get_sender_id()}' not in list(self.task_temp.keys()):
+        if f"{event.get_group_id()}_{event.get_sender_id()}" not in self.task_temp:
             return
         res = await self.command_utils.material(self.task_temp, event)
         if res is not None:
@@ -135,12 +154,13 @@ class McAdminPlugin(Star):
     async def task(self, event: AstrMessageEvent):
         msg = event.message_str
         result = await self.command_utils.task(msg, event, self.task_temp)
-        if result['type'] == "text":
-            yield event.plain_result(result['msg'])
-        elif result['type'] == "image":
-            yield event.image_result(result['msg'])
-        elif result['type'] == "image_list":
-            for img in result['msg']:
+        if result["type"] == "text":
+            yield event.plain_result(result["msg"])
+        elif result["type"] == "image":
+            yield event.image_result(result["msg"])
+        elif result["type"] == "image_list":
+            assert isinstance(result["msg"], list)
+            for img in result["msg"]:
                 yield event.image_result(img)
 
     @filter.command("zz")
@@ -148,10 +168,10 @@ class McAdminPlugin(Star):
     async def zz(self, event: AstrMessageEvent):
         msg = event.message_str
         res = await self.command_utils.zz(msg, event)
-        if res.get("type") == "text":
-            yield event.plain_result(res.get("msg"))
-        elif res.get("type") == "image":
-            yield event.image_result(res.get("msg"))
+        if res["type"] == "text":
+            yield event.plain_result(res["msg"])
+        elif res["type"] == "image":
+            yield event.image_result(res["msg"])
 
     async def terminate(self):
         """可选择实现异步的插件销毁方法，当插件被卸载/停用时会调用。"""
