@@ -15,12 +15,12 @@ from cachetools import TTLCache
 # TODO: 3. MCDR命令
 # TODO: 4. 服群聊天
 # 5. 服务器状态监控
-# TODO: 6.
+# 6. Wiki查询 ✓
 @register(
     "astrbot_plugin_mc_admin",
     "Xc_Star",
     "这是 Minecraft 服务器 的管理插件，支持群组服，RCON命令，list，珍珠炮落点计算，服务器工程坐标，备货清单，白名单管理等功能",
-    "1.1.1",
+    "1.2.0",
     "https://github.com/Xc-Star/astrbot_plugin_mc_admin",
 )
 class McAdminPlugin(Star):
@@ -30,7 +30,7 @@ class McAdminPlugin(Star):
         self.config = config
         # 连接数据库
         self.db_util = DbUtils()
-        self.command_utils = CommandUtils(config, self.db_util.get_conn())
+        self.command_utils = CommandUtils(config, self.db_util.get_conn(), context)
         self.task_temp = TTLCache(maxsize=50, ttl=300)
 
     async def initialize(self):
@@ -173,9 +173,23 @@ class McAdminPlugin(Star):
         elif res["type"] == "image":
             yield event.image_result(res["msg"])
 
+    @filter.command("wiki")
+    @in_enabled_groups()
+    async def wiki(self, event: AstrMessageEvent):
+        question = event.message_str.removeprefix("wiki").strip()
+        if not question:
+            yield event.plain_result("请输入要查询的内容喵~\n用法: wiki <问题>")
+            return
+        yield event.plain_result("等我查查喵～")
+        result = await self.command_utils.wiki(question)
+        yield event.plain_result(result["msg"])
+
     async def terminate(self):
         """可选择实现异步的插件销毁方法，当插件被卸载/停用时会调用。"""
         # 关闭 browser 实例（使用 ImageUtils 的，TaskUtils 只是转发）
         await self.command_utils.image_utils.close_browser()
+        # 关闭 Wiki HTTP 客户端
+        if self.command_utils.wiki_utils:
+            await self.command_utils.wiki_utils.close()
         # 关闭数据库连接
         self.db_util.close()

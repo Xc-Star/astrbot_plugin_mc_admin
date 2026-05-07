@@ -5,7 +5,7 @@
 ## 插件信息
 - 插件名称：`astrbot_plugin_mc_admin`
 - 作者：`Xc_Star`
-- 当前版本：`1.1.1`
+- 当前版本：`1.2.0`
 - 仓库地址：[https://github.com/Xc-Star/astrbot_plugin_mc_admin](https://github.com/Xc-Star/astrbot_plugin_mc_admin)
 
 ## 依赖与启动提醒
@@ -38,6 +38,7 @@
 /loc ｜ 查看 loc 命令帮助
 /task ｜ 查看服务器施工工程
 /zz <x> <z> ｜ 珍珠炮落点计算
+/wiki <问题> | 通过大模型查wiki
 /原图 ｜ 获取上一次list的背景图
 /抽卡 ｜ 随机获取一张list图库的图
 ```

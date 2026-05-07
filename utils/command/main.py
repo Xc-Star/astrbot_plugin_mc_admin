@@ -29,6 +29,7 @@ from ..message import MessageUtils
 from ..task import TaskUtils
 from ..whitelist.main import WhitelistUtils
 from ..pearl_calculator import PearlCalculatorUtils
+from ..wiki import WikiUtils
 
 
 # ==================== 类型定义 ====================
@@ -66,7 +67,7 @@ MATERIAL_UNIT_MAP = {
 class CommandUtils:
     """Minecraft 服务器命令工具类"""
 
-    def __init__(self, config: AstrBotConfig, conn: sqlite3.Connection):
+    def __init__(self, config: AstrBotConfig, conn: sqlite3.Connection, context=None):
         """初始化命令工具"""
         # 工具类初始化
         self.config_utils = ConfigUtils(config)
@@ -75,6 +76,7 @@ class CommandUtils:
         self.loc_utils = LocUtils(conn)  # 使用数据库存储
         self.task_utils = TaskUtils(self.config_utils, conn, self.image_utils)
         self.pearl_calculator_util = PearlCalculatorUtils(config)
+        self.wiki_utils = WikiUtils(context) if context else None
 
         # 服务器与连接池
         self.servers = self.config_utils.get_server_list()
@@ -730,3 +732,18 @@ class CommandUtils:
             return {"type": "text", "msg": res.get("msg", "")}
         image_path = await self.image_utils.generate_zz_image(res.get("data", {}))
         return {"type": "image", "msg": image_path}
+
+    # ==================== Wiki 查询 ====================
+    async def wiki(self, question: str) -> McResponse:
+        """处理 Wiki 查询命令
+
+        Args:
+            question: 用户的 Minecraft 相关问题
+
+        Returns:
+            {"type": "text", "msg": "回答内容"}
+        """
+        if not self.wiki_utils:
+            return {"type": "text", "msg": "Wiki 功能未初始化喵~"}
+        answer = await self.wiki_utils.query_wiki(question)
+        return {"type": "text", "msg": answer}
