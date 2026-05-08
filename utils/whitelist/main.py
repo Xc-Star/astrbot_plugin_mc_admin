@@ -299,11 +299,16 @@ class WhitelistUtils:
 
     async def operation_whitelist(self, operation: str, username: str) -> Tuple[bool, str]:
         """处理白名单添加/移除操作"""
-        # 在所有服务器上执行命令
-        await self._execute_whitelist_command(operation, username)
-        
+
         # 根据操作类型处理数据库
         if operation == 'add':
-            return await self._add_user_to_whitelist(username)
+            success, msg = await self._add_user_to_whitelist(username)
         else:
-            return await self._remove_user_from_whitelist(username)
+            success, msg = await self._remove_user_from_whitelist(username)
+
+        # 在所有服务器上执行命令
+        if success:
+            await self._execute_whitelist_command(operation, username)
+            return True, msg
+        else:
+            return False, msg
