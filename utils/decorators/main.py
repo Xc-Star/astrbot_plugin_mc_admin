@@ -2,11 +2,6 @@ from functools import wraps
 
 
 def in_enabled_groups():
-    """
-    装饰器：仅当事件所在群在配置的 enabled_groups 内时才继续执行。
-    要求被修饰方法签名形如 (self, event, ...)，且 self.config 可用。
-    """
-
     def decorator(func):
         @wraps(func)
         async def wrapper(self, event, *args, **kwargs):
@@ -23,7 +18,6 @@ def in_enabled_groups():
                 group_id = None
             if not enabled_groups or group_id not in enabled_groups:
                 return
-            # 透传异步生成器
             async for result in func(self, event, *args, **kwargs):
                 yield result
 
@@ -33,14 +27,6 @@ def in_enabled_groups():
 
 
 def requires_enabled(field_name: str, message: str, allow_admin_bypass: bool = False):
-    """
-    装饰器：检查配置中某开关字段是否启用；未启用则给出提示信息。
-    - field_name: 配置中的布尔字段名
-    - message: 未启用时给出的提示文案
-    - allow_admin_bypass: 若为 True，管理员可绕过开关直接执行
-    需配合 (self, event, ...) 签名，self.config 与 event.is_admin() 可用。
-    """
-
     def decorator(func):
         @wraps(func)
         async def wrapper(self, event, *args, **kwargs):
@@ -57,7 +43,6 @@ def requires_enabled(field_name: str, message: str, allow_admin_bypass: bool = F
                         yield result
                     return
                 if hasattr(event, "plain_result"):
-                    # 返回提示信息
                     yield event.plain_result(message)
                     return
                 return
@@ -67,5 +52,3 @@ def requires_enabled(field_name: str, message: str, allow_admin_bypass: bool = F
         return wrapper
 
     return decorator
-
-

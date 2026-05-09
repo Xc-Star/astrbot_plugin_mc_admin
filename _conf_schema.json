@@ -5,17 +5,17 @@
         "hint": "只有在这个列表中的群聊才会启用回复功能，如果为空则不启用回复功能",
         "default": []
     },
-    "bot_prefix":{
-        "description":"假人前缀",
-        "type":"string",
-        "hint":"假人的前缀(如果是“假的”可以直接使用中文)",
-        "default":"bot_"
+    "bot_prefix": {
+        "description": "假人前缀",
+        "type": "string",
+        "hint": "假人的前缀(如果是“假的”可以直接使用中文)",
+        "default": "bot_"
     },
-    "servers": {
+    "servers_config": {
         "description": "服务器列表",
-        "type": "list",
-        "hint": "配置需要监听的服务器列表，以“名字:地址:端口:RCON密码”来进行配置。注意使用英文的分号",
-        "default": []
+        "type": "text",
+        "hint": "配置服务器列表，名字用于区分服务器：rcon用于执行MC命令。mcdr用于执行mcdr命令(非必填)，mcdr需要安装console_command_api插件。可前往 https://domain.com 进行可视化配置",
+        "default": "[\n    {\n        \"name\": \"生存服\",\n        \"rcon_ip\": \"127.0.0.1\",\n        \"rcon_port\": 25575,\n        \"rcon_password\": \"password\",\n        \"mcdr_ip\": \"127.0.0.1\",\n        \"mcdr_port\": 8000,\n        \"mcdr_token\": \"<token>\"\n    },\n    {\n        \"name\": \"创造服\",\n        \"rcon_ip\": \"127.0.0.1\",\n        \"rcon_port\": 25576,\n        \"rcon_password\": \"password\",\n        \"mcdr_ip\": \"127.0.0.1\",\n        \"mcdr_port\": 8001,\n        \"mcdr_token\": \"<token>\"\n    }\n]"
     },
     "enable_whitelist_compare": {
         "description": "list命令是否开启白名单对比",

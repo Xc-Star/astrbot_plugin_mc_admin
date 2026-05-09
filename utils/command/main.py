@@ -4,6 +4,7 @@ import re
 import sqlite3
 from typing import Optional, List, Dict, Tuple, TypedDict
 
+import httpx
 from astrbot.api import logger
 from astrbot.api.event import AstrMessageEvent
 from astrbot.core import AstrBotConfig
@@ -14,8 +15,10 @@ from ..command.helpers import (
     LOC_ADD_RE,
     LOC_SET_RE,
     MC_COMMAND_RE,
+    MCDR_COMMAND_RE,
     find_server_by_name,
     send_command,
+    send_mcdr_command,
     parse_list_players,
     get_whitelist,
     split_players_by_whitelist,
@@ -151,6 +154,46 @@ class CommandUtils:
         help_data = self.message.get_help_data()
         help_image_path = await self.image_utils.generate_help_image(help_data)
         return {"type": "image", "msg": help_image_path}
+
+    async def mcdr(self, msg: str, event: AstrMessageEvent) -> McResponse:
+        """处理 MCDR HTTP 命令。"""
+        if not event.is_admin():
+            return {"type": "text", "msg": self.PERMISSION_DENIED}
+
+        match = MCDR_COMMAND_RE.match(msg.strip())
+        if not match:
+            return {
+                "type": "text",
+                "msg": "是/mcdr <服务器名> <MCDR命令>喵~",
+            }
+
+        server_name, command = match.groups()
+        server = find_server_by_name(self.servers, server_name)
+        if server is None:
+            return {"type": "text", "msg": f'没找到"{server_name}"喵~'}
+
+        if not server.get("has_mcdr"):
+            return {
+                "type": "text",
+                "msg": f"服务器{server_name}还没有配置 MCDR 接口喵~",
+            }
+
+        try:
+            send_result = await send_mcdr_command(server, command.strip())
+        except httpx.HTTPStatusError as e:
+            return {
+                "type": "text",
+                "msg": f"MCDR 接口请求失败喵~\nHTTP {e.response.status_code}",
+            }
+        except httpx.HTTPError as e:
+            return {"type": "text", "msg": f"MCDR 接口连接失败喵~\n{e}"}
+        except ValueError as e:
+            return {"type": "text", "msg": str(e)}
+        except Exception as e:
+            logger.exception("执行 MCDR 命令失败")
+            return {"type": "text", "msg": f"执行 MCDR 命令失败喵~\n{e}"}
+
+        return {"type": "text", "msg": send_result}
 
     # ==================== 玩家列表 ====================
     async def list_players(self) -> str:

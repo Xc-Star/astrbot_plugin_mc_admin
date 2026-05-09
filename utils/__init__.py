@@ -5,6 +5,7 @@ from .media.image import ImageUtils
 from .loc.result import LocResult
 from .decorators import in_enabled_groups, requires_enabled
 from .db.main import DbUtils
+from .http import AsyncHttpClient, HttpUtils
 from .fileparse.item_mapping import ItemMapping, item_mapping
 from .command.helpers import (
     PERMISSION_DENIED,
@@ -38,6 +39,8 @@ __all__ = [
     "split_players_by_whitelist",
     "split_players_by_prefix",
     "DbUtils",
+    "AsyncHttpClient",
+    "HttpUtils",
     "ItemMapping",
     "item_mapping"
 ]

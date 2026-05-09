@@ -1,13 +1,14 @@
 import sqlite3
 from typing import Tuple, Dict, Optional
 
-import aiohttp
 import asyncio
+import httpx
 
 from astrbot.core import logger
 from ..command.helpers import (
     get_whitelist, send_command,
 )
+from ..http import AsyncHttpClient
 
 # 常量定义
 MOJANG_PROFILES_API = "https://api.mojang.com/profiles/minecraft"
@@ -23,6 +24,7 @@ class WhitelistUtils:
         self.conn = conn
         self.servers = servers
         self.bot_prefix = bot_prefix
+        self.http = AsyncHttpClient(timeout=REQUEST_TIMEOUT)
         
         # 查询user_profile表是否有数据
         if self._is_database_empty():
@@ -30,6 +32,9 @@ class WhitelistUtils:
 
     # ==================== 数据库辅助方法 ====================
     
+    async def close(self):
+        await self.http.close()
+
     def _is_database_empty(self) -> bool:
         """检查数据库是否为空"""
         cursor = self.conn.cursor()
@@ -88,58 +93,45 @@ class WhitelistUtils:
     
     async def _fetch_uuid_batch(self, usernames: list[str]) -> list[dict]:
         """批量获取UUID"""
-        async with aiohttp.ClientSession() as session:
-            try:
-                async with session.post(
-                    MOJANG_PROFILES_API,
-                    json=usernames,
-                    timeout=REQUEST_TIMEOUT
-                ) as response:
-                    if response.status == 200:
-                        data = await response.json()
-                        return data if isinstance(data, list) else []
-                    else:
-                        logger.warning(f"获取 UUID 失败，状态码: {response.status}, 批次: {usernames}")
-                        return []
-            except Exception as e:
-                logger.error(f"请求 UUID 接口失败: {e}, 批次: {usernames}")
-                return []
-    
+        try:
+            data = await self.http.post_json(MOJANG_PROFILES_API, json=usernames)
+            return data if isinstance(data, list) else []
+        except httpx.HTTPStatusError as e:
+            logger.warning(f"?? UUID ??????: {e.response.status_code}, ??: {usernames}")
+            return []
+        except Exception as e:
+            logger.error(f"?? UUID ????: {e}, ??: {usernames}")
+            return []
+
     async def _fetch_uuid_by_username(self, username: str) -> Optional[dict]:
         """根据用户名获取UUID"""
-        async with aiohttp.ClientSession() as session:
-            try:
-                async with session.get(
-                    f"{MOJANG_USER_API}/{username}",
-                    timeout=REQUEST_TIMEOUT
-                ) as response:
-                    if response.status == 200:
-                        data = await response.json()
-                        if data.get("errorMessage"):
-                            return None
-                        return data
-                    return None
-            except Exception as e:
-                logger.error(f"获取用户 UUID 失败: {e}, 用户名: {username}")
+        try:
+            data = await self.http.get_json(f"{MOJANG_USER_API}/{username}")
+            if data.get("errorMessage"):
                 return None
-    
+            return data
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 404:
+                return None
+            logger.error(f"???? UUID ??: {e}, ???: {username}")
+            return None
+        except Exception as e:
+            logger.error(f"???? UUID ??: {e}, ???: {username}")
+            return None
+
     async def _fetch_history_names(self, username: str) -> Optional[dict]:
         """获取历史用户名"""
-        async with aiohttp.ClientSession() as session:
-            try:
-                async with session.get(
-                    f"{HISTORY_ID_API}/{username}",
-                    timeout=REQUEST_TIMEOUT
-                ) as response:
-                    if response.status == 200:
-                        return await response.json()
-                    return None
-            except Exception as e:
-                logger.error(f"获取历史用户名失败: {e}, username: {username}")
+        try:
+            return await self.http.get_json(f"{HISTORY_ID_API}/{username}")
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 404:
                 return None
-    
-    # ==================== 业务逻辑方法 ====================
-    
+            logger.error(f"?????????: {e}, username: {username}")
+            return None
+        except Exception as e:
+            logger.error(f"?????????: {e}, username: {username}")
+            return None
+
     async def initialize(self):
         """初始化白名单数据"""
         try:
