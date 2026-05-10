@@ -5,7 +5,7 @@
 ## 插件信息
 - 插件名称：`astrbot_plugin_mc_admin`
 - 作者：`Xc_Star`
-- 当前版本：`1.3.0`
+- 当前版本：`1.3.1`
 - 仓库地址：[https://github.com/Xc-Star/astrbot_plugin_mc_admin](https://github.com/Xc-Star/astrbot_plugin_mc_admin)
 
 ## 依赖与启动提醒
@@ -31,7 +31,8 @@
 /mc ｜ 查看帮助
 /mc status ｜ 查看服务器状态
 /mc wl add/remove <ID> ｜ 给玩家添加/移除白名单(管理员)
-/mc command <服务器名字> <command> ｜ 向指定服务器发送命令(管理员)
+/mc command <服务器名字> <command> ｜ 向指定服务器发送MC命令(管理员)
+/mcdr <服务器名> <命令> ｜ 向指定服务器发送MCDR命令(管理员)
 /mc reset wldb ｜ 重载数据库的白名单数据
 
 /list ｜ 查看所有服务器在线玩家
