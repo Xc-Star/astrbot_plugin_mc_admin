@@ -264,7 +264,7 @@ class WhitelistUtils:
             try:
                 await send_command(server, f'whitelist {operation} {username}')
             except Exception:
-                pass
+                logger.warning(f"在服务器 {server['name']} 上执行白名单命令失败: {operation} {username}")
         
         await asyncio.gather(*[do_op(s) for s in self.servers], return_exceptions=True)
     

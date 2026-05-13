@@ -8,6 +8,7 @@ HELP_ITEMS = [
     ("/mc wl add/remove &lt;游戏ID&gt;", "给玩家添加/移除白名单(管理员)"),
     ("/mc command &lt;服务器名&gt; &lt;命令&gt;", "向指定服务器发送 MC 命令(管理员)"),
     ("/mcdr &lt;服务器名&gt; &lt;命令&gt;", "向指定服务器发送 MCDR 命令(管理员)"),
+    ("/say &lt;信息&gt;", "向服务器发送信息"),
     ("/mc reset wldb", "重载数据库中的白名单数据"),
     ("/mc status", "查看服务器状态"),
     ("/wiki &lt;问题&gt;", "通过大模型查 wiki 获取答案"),

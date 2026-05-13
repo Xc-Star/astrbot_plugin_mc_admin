@@ -201,7 +201,7 @@ class CommandUtils:
             try:
                 await send_command(server, f'say {msg}')
             except Exception:
-                pass
+                logger.warning(f"向服务器 {server['name']} 发送广播消息失败")
             
         # 并发发送广播消息到所有服务器，忽略发送失败的服务器
         await asyncio.gather(*[send_broadcast(s) for s in self.servers], return_exceptions=True)
