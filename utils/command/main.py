@@ -194,6 +194,17 @@ class CommandUtils:
             return {"type": "text", "msg": f"执行 MCDR 命令失败喵~\n{e}"}
 
         return {"type": "text", "msg": send_result}
+    
+    async def broadcast_msg(self, msg: str) -> None:
+        """广播消息到所有服务器"""
+        async def send_broadcast(server: Dict):
+            try:
+                await send_command(server, f'say {msg}')
+            except Exception:
+                pass
+            
+        # 并发发送广播消息到所有服务器，忽略发送失败的服务器
+        await asyncio.gather(*[send_broadcast(s) for s in self.servers], return_exceptions=True)
 
     # ==================== 玩家列表 ====================
     async def list_players(self) -> str:
