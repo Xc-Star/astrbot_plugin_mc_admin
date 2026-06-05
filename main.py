@@ -13,14 +13,14 @@ from cachetools import TTLCache
 # TODO: 1. 区块回档
 # TODO: 2. 大模型自动生成命令，适配carpet
 # 3. MCDR命令
-# TODO: 4. 服群聊天
+# 4. 服群聊天
 # 5. 服务器状态监控
 # 6. Wiki查询
 @register(
     "astrbot_plugin_mc_admin",
     "Xc_Star",
     "这是 Minecraft 服务器 的管理插件，支持群组服，RCON命令，list，珍珠炮落点计算，服务器工程坐标，备货清单，白名单管理等功能",
-    "1.3.2",
+    "1.4.2",
     "https://github.com/Xc-Star/astrbot_plugin_mc_admin",
 )
 class McAdminPlugin(Star):
@@ -113,6 +113,17 @@ class McAdminPlugin(Star):
         msg = event.message_str
         result = await self.command_utils.mcdr(msg, event)
         yield event.plain_result(result["msg"])
+
+    @filter.command("say")
+    @in_enabled_groups()
+    async def say(self, event: AstrMessageEvent):
+        # msg移除最前面的"say "指令部分
+        logger.info(f"开始执行say命令: {event.message_str}")
+        msg = event.message_str.removeprefix("say ").strip()
+        sender_name = event.get_sender_name()
+        send_msg = f"{sender_name}: {msg}"
+        await self.command_utils.broadcast_msg(send_msg)
+        yield event.plain_result("帮你发过去了喵～")
 
     @filter.command("loc")
     @in_enabled_groups()

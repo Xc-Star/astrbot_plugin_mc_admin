@@ -42,9 +42,13 @@ async def send_command(server: Dict, command: str) -> str:
 async def send_mcdr_command(server: Dict, command: str) -> str:
     """通过 MCDR console_command_api 执行命令并返回输出。"""
     if not server.get("has_mcdr"):
+        logger.warning(
+            f"服务器 {server.get('name', '未知')} 未配置 MCDR 接口，无法执行命令: {command}"
+        )
         raise ValueError("这个服务器还没有配置 MCDR 接口喵~")
 
     command = normalize_mcdr_command(command)
+    server_name = server.get("name", "未知")
 
     base_url = str(server["mcdr_ip"]).strip()
     if not base_url.startswith(("http://", "https://")):
@@ -56,12 +60,36 @@ async def send_mcdr_command(server: Dict, command: str) -> str:
         "Content-Type": "application/json",
     }
 
-    async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
-        response = await client.post(url, headers=headers, json={"command": command})
-        response.raise_for_status()
+    try:
+        async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
+            response = await client.post(url, headers=headers, json={"command": command})
+            response.raise_for_status()
+    except httpx.HTTPStatusError as e:
+        logger.error(
+            f"服务器 {server_name} 的 MCDR 接口返回异常状态码: "
+            f"command={command}, status={e.response.status_code}, url={url}"
+        )
+        raise
+    except httpx.HTTPError as e:
+        logger.error(
+            f"服务器 {server_name} 的 MCDR 接口请求失败: command={command}, url={url}, error={e}"
+        )
+        raise
 
-    payload = response.json()
+    try:
+        payload = response.json()
+    except ValueError as e:
+        logger.error(
+            f"服务器 {server_name} 的 MCDR 接口返回了非法 JSON: "
+            f"command={command}, url={url}, body={response.text[:200]!r}, error={e}"
+        )
+        raise ValueError("MCDR 接口返回了无法解析的数据喵~") from e
+
     if payload.get("code") != 200:
+        logger.error(
+            f"服务器 {server_name} 的 MCDR 接口返回失败: "
+            f"command={command}, code={payload.get('code')}, msg={payload.get('msg')}"
+        )
         raise ValueError(payload.get("msg") or "MCDR 接口返回失败喵~")
 
     data = payload.get("data") or {}

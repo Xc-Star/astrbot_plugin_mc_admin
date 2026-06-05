@@ -5,7 +5,7 @@
 ## 插件信息
 - 插件名称：`astrbot_plugin_mc_admin`
 - 作者：`Xc_Star`
-- 当前版本：`1.3.2`
+- 当前版本：`1.4.2`
 - 仓库地址：[https://github.com/Xc-Star/astrbot_plugin_mc_admin](https://github.com/Xc-Star/astrbot_plugin_mc_admin)
 
 ## 依赖与启动提醒
@@ -18,6 +18,7 @@
 - 在线玩家列表
 - 白名单管理
 - RCON 命令转发
+- 服群聊天广播
 - 工程任务与材料备货管理（支持 txt/csv/litematic）
 - 珍珠炮落点计算
 - 服务器坐标点管理
@@ -33,6 +34,7 @@
 /mc wl add/remove <ID> ｜ 给玩家添加/移除白名单(管理员)
 /mc command <服务器名字> <command> ｜ 向指定服务器发送MC命令(管理员)
 /mcdr <服务器名> <命令> ｜ 向指定服务器发送MCDR命令(管理员)
+/say <消息> ｜ 向所有服务器广播聊天消息
 /mc reset wldb ｜ 重载数据库的白名单数据
 
 /list ｜ 查看所有服务器在线玩家
