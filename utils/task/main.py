@@ -57,10 +57,12 @@ class TaskUtils:
     def remove_task(self, name, event: AstrMessageEvent):
         task = self.get_task_by_name(name)
         if task["code"] != 200:
+            logger.warning(f"{name}不存在")
             return f"没找到{name}喵~"
 
         permission_error = self._check_task_permission(task["msg"], event)
         if permission_error:
+            logger.warning(f"{event.get_sender_name()}({event.get_sender_id()})没有权限删除{name}")
             return permission_error
 
         operations = [
@@ -70,7 +72,9 @@ class TaskUtils:
 
         success, error = self._execute_sql_with_transaction(operations)
         if success:
+            logger.info(f"{event.get_sender_name()}({event.get_sender_id()})成功删除{name}")
             return f"把{name}删掉了喵~"
+        logger.error(f"{event.get_sender_name()}({event.get_sender_id()})删除{name}失败: {error}")
         return f"呜哇！报错了喵！\n{error}"
 
     def get_task_list(self):
@@ -155,10 +159,12 @@ class TaskUtils:
 
             task_id = self._create_task(task_temp_info)
             if not task_id:
+                logger.error("创建任务记录失败")
                 return "创建任务记录失败喵~"
 
             material_list = self._process_material_file(url, file_name, task_id)
             if not material_list:
+                logger.error("处理材料文件失败 or 没有材料")
                 self.conn.rollback()
                 return "处理材料文件失败喵~"
 
@@ -188,7 +194,7 @@ class TaskUtils:
         cursor = self.conn.execute(sql, task_data)
         return cursor.lastrowid
 
-    def _process_material_file(self, url: str, file_name: str, task_id: int) -> list:
+    def _process_material_file(self, url: str, file_name: str, task_id: int) -> list | None:
         file_path = os.path.join(self.config_utils.get_plugin_path(), "data", file_name)
         if not self.download_file(url, file_path):
             logger.error("文件下载失败")
@@ -197,7 +203,7 @@ class TaskUtils:
         try:
             parse_result = self.file_parser.parse(file_path, int(task_id))
             if parse_result["code"] != 200:
-                logger.error(parse_result["msg"])
+                logger.error(f"文件解析失败: {parse_result['msg']}")
                 return None
 
             return parse_result["msg"]

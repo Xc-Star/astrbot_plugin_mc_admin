@@ -197,6 +197,7 @@ class WikiUtils:
         try:
             provider = self.context.get_using_provider()
             if not provider:
+                logger.warning(f"未配置 LLM，无法使用 Wiki 查询功能。")
                 return "未配置 LLM，无法使用 Wiki 查询功能。"
 
             extracted_title = await self._extract_title(provider, question)
@@ -205,6 +206,7 @@ class WikiUtils:
             title = ""
             page_text = ""
 
+            logger.info(f"开始执行Wiki查询: 提取标题 '{extracted_title}'")
             if extracted_title:
                 search_results = await self.search_page(extracted_title, limit=1)
                 if search_results:
@@ -218,9 +220,11 @@ class WikiUtils:
                     title, page_text = await self._fetch_page_content(title)
 
             if not page_text:
+                logger.warning(f"未找到“{extracted_title or question}”的 Wiki 页面内容。")
                 return f"未找到“{extracted_title or question}”的 Wiki 页面内容。"
 
             if len(page_text) > 8000:
+                logger.warning(f"页面内容过长，截取前8000字符")
                 page_text = page_text[:8000] + "..."
 
             prompt = (

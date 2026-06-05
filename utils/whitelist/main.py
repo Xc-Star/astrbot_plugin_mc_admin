@@ -231,25 +231,34 @@ class WhitelistUtils:
         """验证是否为真实玩家"""
         # 检查是否为机器人用户名
         if self._is_bot_username(username):
+            logger.debug(f"根据前缀判断{username}为机器人玩家")
             return False
 
         # 检查数据库中是否存在
         if self._user_exists_in_db(username):
+            logger.debug(f"根据数据库判断{username}为真人玩家")
             return True
 
         # 检查服务器白名单（防止在游戏内添加白名单，没有存在数据库里）
         whitelist_list = await get_whitelist(self.servers)
         if username in whitelist_list:
             if await self._sync_whitelist_user_to_db(username):
+                logger.debug(f"根据服务器白名单判断{username}为真人玩家")
                 return True
         
         # 通过UUID验证
         if await self._verify_by_uuid(username):
+            logger.debug(f"根据UUID判断{username}为真人玩家")
             return True
         
         # 通过历史用户名验证
         try:
-            return await self._verify_by_history_names(username)
+            if await self._verify_by_history_names(username):
+                logger.debug(f"根据历史用户名判断{username}为真人玩家")
+                return True
+            else:
+                logger.debug(f"根据历史用户名判断{username}为机器人玩家")
+                return False
         except Exception as e:
             logger.error(f"验证玩家失败: {e}, 用户名: {username}")
             return False

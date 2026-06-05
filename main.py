@@ -20,7 +20,7 @@ from cachetools import TTLCache
     "astrbot_plugin_mc_admin",
     "Xc_Star",
     "这是 Minecraft 服务器 的管理插件，支持群组服，RCON命令，list，珍珠炮落点计算，服务器工程坐标，备货清单，白名单管理等功能",
-    "1.3.1",
+    "1.3.2",
     "https://github.com/Xc-Star/astrbot_plugin_mc_admin",
 )
 class McAdminPlugin(Star):
@@ -109,6 +109,7 @@ class McAdminPlugin(Star):
     @filter.command("mcdr")
     @in_enabled_groups()
     async def mcdr(self, event: AstrMessageEvent):
+        logger.info(f"开始执行mcdr命令: {event.message_str}")
         msg = event.message_str
         result = await self.command_utils.mcdr(msg, event)
         yield event.plain_result(result["msg"])
@@ -116,6 +117,7 @@ class McAdminPlugin(Star):
     @filter.command("loc")
     @in_enabled_groups()
     async def loc(self, event: AstrMessageEvent):
+        logger.info(f"开始执行loc命令: {event.message_str}")
         msg = event.message_str
         result = await self.command_utils.loc(msg, event)
         if result["type"] == "image":
@@ -126,6 +128,7 @@ class McAdminPlugin(Star):
     @filter.command("list")
     @in_enabled_groups()
     async def list_players(self, event: AstrMessageEvent):
+        logger.info(f"开始执行list命令")
         result = await self.command_utils.list_players()
         yield event.image_result(result)
 
@@ -137,6 +140,7 @@ class McAdminPlugin(Star):
         allow_admin_bypass=True,
     )
     async def get_background_image(self, event: AstrMessageEvent):
+        logger.info(f"开始执行获取原图命令")
         yield event.image_result(self.command_utils.get_image())
 
     @filter.command("抽卡")
@@ -145,6 +149,7 @@ class McAdminPlugin(Star):
         "enable_background_image_random", "抽卡功能暂未启用", allow_admin_bypass=True
     )
     async def get_random_image(self, event: AstrMessageEvent):
+        logger.info(f"开始执行抽卡命令")
         yield event.image_result(self.command_utils.get_random_image())
 
     @filter.event_message_type(filter.EventMessageType.ALL)
@@ -159,6 +164,7 @@ class McAdminPlugin(Star):
     @filter.command("task")
     @in_enabled_groups()
     async def task(self, event: AstrMessageEvent):
+        logger.info(f"开始执行task命令: {event.message_str}")
         msg = event.message_str
         result = await self.command_utils.task(msg, event, self.task_temp)
         if result["type"] == "text":
@@ -173,6 +179,7 @@ class McAdminPlugin(Star):
     @filter.command("zz")
     @in_enabled_groups()
     async def zz(self, event: AstrMessageEvent):
+        logger.info(f"开始执行珍珠炮计算命令")
         msg = event.message_str
         res = await self.command_utils.zz(msg, event)
         if res["type"] == "text":
@@ -183,8 +190,10 @@ class McAdminPlugin(Star):
     @filter.command("wiki")
     @in_enabled_groups()
     async def wiki(self, event: AstrMessageEvent):
+        logger.info(f"开始执行wiki命令: {event.message_str}")
         question = event.message_str.removeprefix("wiki").strip()
         if not question:
+            logger.warning(f"wiki命令未输入问题")
             yield event.plain_result("请输入要查询的内容喵~\n用法: wiki <问题>")
             return
         yield event.plain_result("等我查查喵～")

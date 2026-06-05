@@ -54,10 +54,13 @@ class FileParser:
         
         # 根据文件类型选择解析方法
         if file_ext == '.litematic':
+            logger.info(f"开始处理Litematic投影文件")
             return self._parse_litematic(file_path, task_id)
         elif file_ext in FILE_PARSE_CONFIGS:
+            logger.info(f"开始处理文本文件")
             return self._parse_text_file(file_path, task_id, FILE_PARSE_CONFIGS[file_ext])
         else:
+            logger.warning(f"不支持的文件格式: {file_ext}")
             return {"code": 500, "msg": f"不支持的文件格式: {file_ext}"}
 
     def _get_file_extension(self, file_path: str) -> str:

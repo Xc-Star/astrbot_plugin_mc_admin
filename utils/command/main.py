@@ -97,12 +97,14 @@ class CommandUtils:
         """处理 MC 相关命令"""
         # 优先处理白名单命令
         if msg.startswith("mc wl"):
+            logger.info(f"开始执行mc wl命令")
             parts = msg.split()
             command = " ".join(parts[1:])
             return await self.wl(command, event)
 
         if msg.startswith("mc status"):
             """获取服务器状态"""
+            logger.info(f"开始执行mc status命令")
             async def get_server_status(
                     server: Dict,
             ) -> Optional[Tuple[str, bool]]:
@@ -129,11 +131,14 @@ class CommandUtils:
             return {"type": "image", "msg": image_path}
 
         if msg.startswith("mc reset"):
+            logger.info(f"开始执行mc reset命令")
             if not event.is_admin():
+                logger.warning(f"用户{event.get_sender_name()}({event.get_sender_id()})没有权限执行mc reset命令")
                 return {"type": "text", "msg": self.PERMISSION_DENIED}
             parts = msg.split()
             command = " ".join(parts[2:])
             if command == "wldb":
+                logger.info(f"开始执行mc reset wldb命令")
                 await self.whitelist_utils.initialize()
                 return {"type": "text", "msg": "白名单数据库重载成功喵~"}
 
@@ -141,16 +146,22 @@ class CommandUtils:
 
         # mc command <服务器> <命令...>
         if len(arr) >= 3 and arr[1] == "command":
+            logger.info(f"开始执行mc command命令")
             if not event.is_admin():
+                logger.warning(f"用户{event.get_sender_name()}({event.get_sender_id()})没有权限执行mc command命令")
                 return {"type": "text", "msg": self.PERMISSION_DENIED}
             server = find_server_by_name(self.servers, arr[2])
             if server is None:
+                logger.warning(f"找不到服务器: {arr[2]}")
                 return {"type": "text", "msg": "找不到服务器喵~"}
             match = MC_COMMAND_RE.match(msg)
             command = match.group(1) if match else ""
+            logger.info(f"开始执行mc command命令: 服务器: {arr[2]}, 命令: {command}")
             send_result = await send_command(server, command)
+            logger.info(f"mc command命令执行结果: {send_result}")
             return {"type": "text", "msg": send_result}
 
+        logger.info(f"mc命令未匹配到任何命令, 返回帮助信息")
         help_data = self.message.get_help_data()
         help_image_path = await self.image_utils.generate_help_image(help_data)
         return {"type": "image", "msg": help_image_path}
@@ -162,6 +173,7 @@ class CommandUtils:
 
         match = MCDR_COMMAND_RE.match(msg.strip())
         if not match:
+            logger.warning(f"MCDR命令格式校验失败: {msg}")
             return {
                 "type": "text",
                 "msg": "是/mcdr <服务器名> <MCDR命令>喵~",
@@ -170,9 +182,11 @@ class CommandUtils:
         server_name, command = match.groups()
         server = find_server_by_name(self.servers, server_name)
         if server is None:
+            logger.warning(f"没找到服务器: {server_name}")
             return {"type": "text", "msg": f'没找到"{server_name}"喵~'}
 
         if not server.get("has_mcdr"):
+            logger.warning(f"服务器{server_name}还没有配置 MCDR 接口")
             return {
                 "type": "text",
                 "msg": f"服务器{server_name}还没有配置 MCDR 接口喵~",
@@ -181,16 +195,19 @@ class CommandUtils:
         try:
             send_result = await send_mcdr_command(server, command.strip())
         except httpx.HTTPStatusError as e:
+            logger.warning(f"MCDR 接口请求失败: {e}")
             return {
                 "type": "text",
                 "msg": f"MCDR 接口请求失败喵~\nHTTP {e.response.status_code}",
             }
         except httpx.HTTPError as e:
+            logger.warning(f"MCDR 接口连接失败: {e}")
             return {"type": "text", "msg": f"MCDR 接口连接失败喵~\n{e}"}
         except ValueError as e:
+            logger.warning(f"MCDR 命令格式错误: {e}")
             return {"type": "text", "msg": str(e)}
         except Exception as e:
-            logger.exception("执行 MCDR 命令失败")
+            logger.error(f"执行 MCDR 命令失败: {e}")
             return {"type": "text", "msg": f"执行 MCDR 命令失败喵~\n{e}"}
 
         return {"type": "text", "msg": send_result}
@@ -206,7 +223,9 @@ class CommandUtils:
             """处理单个服务器的玩家列表"""
             try:
                 res = await send_command(server, "list")
+                logger.debug(f"给{server['name']}发送list命令结果: {res}")
             except Exception:
+                logger.warning(f"给{server['name']}发送list命令失败")
                 return None
 
             players = parse_list_players(res)
@@ -216,12 +235,15 @@ class CommandUtils:
             # 根据配置选择分类方式
             if self.config_utils.enable_whitelist_compare:
                 # 使用白名单工具判断是否为真人玩家
+                logger.debug(f"使用白名单工具判断是否为真人玩家")
                 bot_players: List[str] = []
                 real_players: List[str] = []
                 for p in players:
                     if await self.whitelist_utils.is_real_player(p):
+                        logger.debug(f"判断{p}为真人玩家")
                         real_players.append(p)
                     else:
+                        logger.debug(f"判断{p}为机器人玩家")
                         bot_players.append(p)
             else:
                 bot_players, real_players = split_players_by_prefix(players, bot_prefix)
@@ -232,8 +254,10 @@ class CommandUtils:
             }
 
         # 并发处理所有服务器
+        logger.info(f"并发给所有服务器发送list命令")
         tasks = [process_server(s) for s in self.servers]
         results = await asyncio.gather(*tasks, return_exceptions=True)
+        logger.debug(f"并发给所有服务器发送list命令结果: {results}")
 
         # 汇总结果
         servers_players: Dict[str, Dict[str, List[str]]] = {}
@@ -273,28 +297,35 @@ class CommandUtils:
         """处理白名单命令"""
         # 权限检查
         if not event.is_admin():
+            logger.warning(f"用户{event.get_sender_name()}({event.get_sender_id()})没有权限执行wl命令")
             return {"type": "text", "msg": self.PERMISSION_DENIED}
 
         # 查询白名单列表
         if msg == "wl list":
+            logger.info(f"开始执行wl list命令")
             return await self._handle_wl_list()
 
         # 解析命令
         arr = msg.split(" ")
         if len(arr) != 3:
+            logger.warning(f"wl命令格式错误: {msg}")
             return {"type": "text", "msg": self.message.get_help_message()}
 
         # 白名单添加/移除操作
         if arr[1] in ("add", "remove"):
+            logger.info(f"开始执行wl {arr[1]}命令")
             # return await self._handle_wl_operation(arr[1], arr[2])
             success, message = await self.whitelist_utils.operation_whitelist(
                 arr[1], arr[2]
             )
             if success:
+                logger.info(f"wl {arr[1]}命令成功, 用户名: {arr[2]}")
                 return {"type": "text", "msg": message}
             else:
+                logger.warning(f"wl {arr[1]}命令失败, 用户名: {arr[2]}")
                 return {"type": "text", "msg": message}
 
+        logger.warning(f"发送rcon命令添加白名单失败: 未知错误! 操作: {arr[1]}, 用户名: {arr[2]}")
         return {"type": "text", "msg": "未知错误喵~"}
 
     async def _handle_wl_list(self) -> McResponse:
@@ -339,27 +370,34 @@ class CommandUtils:
         """
         # 列出所有位置
         if msg.startswith("loc list"):
+            logger.info(f"开始执行loc list命令: {msg}")
             return {"type": "text", "msg": self.loc_utils.list_loc()}
 
         # 添加位置
         if msg.startswith("loc add"):
+            logger.info(f"开始执行loc add命令: {msg}")
             return {"type": "text", "msg": self._handle_loc_add(msg)}
 
         # 删除位置
         if msg.startswith("loc remove"):
+            logger.info(f"开始执行loc remove命令: {msg}")
             parts = msg.split(" ")
             if len(parts) != 3:
+                logger.warning(f"loc remove命令格式错误: {msg}")
                 return {"type": "text", "msg": "是/loc remove <项目名字>喵"}
             return {"type": "text", "msg": self.loc_utils.remove_loc(parts[2])}
 
         # 修改位置
         if msg.startswith("loc set"):
+            logger.info(f"开始执行loc set命令: {msg}")
             return {"type": "text", "msg": self._handle_loc_set(msg)}
 
         # 查看位置详情
         if msg.startswith("loc "):
+            logger.info(f"开始执行loc query命令: {msg}")
             return {"type": "text", "msg": self._handle_loc_query(msg)}
 
+        logger.warning(f"loc命令格式错误, 执行默认帮助命令: {msg}")
         help_data = self.message.get_loc_help_data()
         help_image_path = await self.image_utils.generate_help_image(
             help_data, filename="loc_help.png"
@@ -454,35 +492,44 @@ class CommandUtils:
         """
         # 添加工程
         if msg.startswith("task add"):
+            logger.info(f"开始执行task add命令, 添加标识缓存")
             return self._handle_task_add(msg, event, task_temp)
 
         # 删除工程
         if msg.startswith("task remove"):
             parts = msg.split(" ")
             if len(parts) != 3:
+                logger.warning(f"task remove命令格式错误: {msg}")
                 return {"type": "text", "msg": "是/task remove <项目名字>喵~"}
+            logger.info(f"开始执行删除工程命令: {parts[2]}")
             return {"type": "text", "msg": self.task_utils.remove_task(parts[2], event)}
 
         # 工程列表
         if msg.startswith("task list"):
+            logger.info(f"开始执行获取工程列表命令")
             return {"type": "text", "msg": self.task_utils.get_task_list()}
 
         # 修改工程
         if msg.startswith("task set"):
+            logger.info(f"开始执行修改工程命令")
             return self._handle_task_set(msg, event)
 
         # 认领材料
         if msg.startswith("task claim"):
+            logger.info(f"开始执行认领材料命令")
             return self._handle_task_claim(msg, event)
 
         # 提交材料
         if msg.startswith("task commit"):
+            logger.info(f"开始执行提交材料命令")
             return self._handle_task_commit(msg)
 
         # 查看工程详情
         if msg.startswith("task"):
+            logger.info(f"开始执行查看工程详情命令")
             return await self._handle_task_query(msg)
 
+        logger.warning(f"task命令未匹配到任何命令, 返回帮助信息")
         help_data = self.message.get_task_help_data()
         help_image_path = await self.image_utils.generate_help_image(
             help_data, filename="task_help.png"
@@ -496,11 +543,13 @@ class CommandUtils:
         # 校验命令格式
         parts = msg.split(" ")
         if len(parts) != 7:
+            logger.warning(f"task add命令格式错误: {msg}")
             return {
                 "type": "text",
                 "msg": "是/task add <工程名字> <0-主世界 1-地狱 2-末地> <x y z>喵~",
             }
 
+        logger.info(f"开始执行添加工程命令: name: {parts[2]}, dimension: {parts[3]}, location: {parts[4]} {parts[5]} {parts[6]}")
         # 解析参数
         name, dimension = parts[2], parts[3]
         location = f"{parts[4]} {parts[5]} {parts[6]}"
@@ -508,22 +557,26 @@ class CommandUtils:
         # 校验坐标
         is_valid, error_msg = self.validate_coordinates(location)
         if not is_valid:
+            logger.warning(f"坐标校验失败: {error_msg}")
             return {"type": "text", "msg": error_msg}
 
         # 校验是否重名
         task = self.task_utils.get_task_by_name(name)
         if task["code"] == 200:
+            logger.warning(f"{name}已存在")
             return {"type": "text", "msg": f"已经有{name}了喵~"}
 
         # 校验是否已经在创建中
         for key in task_temp:
             if task_temp[key]["name"] == name:
                 if not event.is_admin():
+                    logger.warning(f"{task_temp[key]['sender_name']}({task_temp[key]['sender_id']})已经申请创建{name}了")
                     return {
                         "type": "text",
                         "msg": f"{task_temp[key]['sender_name']}({task_temp[key]['sender_id']})已经申请创建{name}了喵~",
                     }
                 # 管理员强制创建
+                logger.info(f"管理员{event.get_sender_name()}({event.get_sender_id()})强制创建{name}")
                 task_temp.pop(key)
                 break
 
@@ -543,17 +596,20 @@ class CommandUtils:
         """处理任务修改"""
         parts = msg.split(" ")
         if len(parts) != 8:
+            logger.warning(f"task set命令格式错误: {msg}")
             return {
                 "type": "text",
                 "msg": "是: /task set <工程名字> <新工程名称> <0-主世界 1-地狱 2-末地> <x y z>喵！",
             }
 
+        logger.info(f"开始执行修改工程命令: original_name: {parts[2]}, name: {parts[3]}, dimension: {parts[4]}, location: {parts[5]} {parts[6]} {parts[7]}")
         original_name, name, dimension = parts[2], parts[3], parts[4]
         location = f"{parts[5]} {parts[6]} {parts[7]}"
 
         # 校验坐标
         is_valid, error_msg = self.validate_coordinates(location)
         if not is_valid:
+            logger.warning(f"坐标校验失败: {error_msg}")
             return {"type": "text", "msg": error_msg}
 
         return {
@@ -567,8 +623,10 @@ class CommandUtils:
         """处理材料认领"""
         parts = msg.split(" ")
         if len(parts) != 4:
+            logger.warning(f"task claim命令格式错误: {msg}")
             return {"type": "text", "msg": "是/task claim <工程名字> <材料编号>喵~"}
 
+        logger.info(f"{parts[2]}认领材料{parts[3]}号")
         task_name, material_number = parts[2], parts[3]
         return {
             "type": "text",
@@ -579,11 +637,13 @@ class CommandUtils:
         """处理材料提交"""
         parts = msg.split(" ", 5)
         if len(parts) < 6:
+            logger.warning(f"task commit命令格式错误: {msg}")
             return {
                 "type": "text",
                 "msg": "是/task commit <工程名称> <材料序号> <n 个/组/盒> <材料所在位置/假人>喵~",
             }
 
+        logger.info(f"开始执行提交材料命令: task_name: {parts[2]}, material_number: {parts[3]}, quantity_str: {parts[4]}, location: {parts[5]}")
         task_name, material_number, quantity_str, location = (
             parts[2],
             parts[3],
@@ -601,6 +661,7 @@ class CommandUtils:
                     individual, stack, shulker = count * i, count * s, count * sh
                     break
                 except ValueError:
+                    logger.warning(f"材料数量格式错误: {quantity_str}")
                     return {
                         "type": "text",
                         "msg": "是/task commit <工程名称> <材料序号> <n 个/组/盒> <材料所在位置/假人>喵~",
@@ -610,6 +671,7 @@ class CommandUtils:
             if quantity_str.isdigit():
                 individual = int(quantity_str)
             else:
+                logger.warning(f"材料数量格式错误: {quantity_str}")
                 return {
                     "type": "text",
                     "msg": "是/task commit <工程名称> <材料序号> <n 个/组/盒> <材料所在位置/假人>喵~",
@@ -628,6 +690,7 @@ class CommandUtils:
 
         # task 不带参数返回帮助
         if len(parts) != 2:
+            logger.info(f"task query命令不带参数, 返回帮助信息")
             help_data = self.message.get_task_help_data()
             help_image_path = await self.image_utils.generate_help_image(
                 help_data, filename="task_help.png"
@@ -638,8 +701,10 @@ class CommandUtils:
         task_name = parts[1]
         task = self.task_utils.get_task_by_name(task_name)
         if task["code"] != 200:
+            logger.warning(f"{task_name}不存在")
             return {"type": "text", "msg": f"没找到{task_name}喵~"}
 
+        logger.info(f"开始执行查询工程详情命令: task_name: {task_name}")
         materia = self.task_utils.get_material_list_by_task_id(task["msg"][0][0])
         material_list = materia["msg"]
         material_count = len(material_list)
@@ -723,11 +788,13 @@ class CommandUtils:
             return None
 
         # 提取文件信息
+        logger.info(f"开始执行投影处理任务")
         file_data = message[0].get("data", {})
         filename = file_data.get("file", "")
 
         # 校验文件扩展名
         if not filename.endswith(ALLOWED_FILE_EXTENSIONS):
+            logger.warning(f"文件扩展名不支持: {filename}")
             return None
 
         # 获取文件下载链接
@@ -762,16 +829,19 @@ class CommandUtils:
         """
         position = msg.split()
         if len(position) != 3:
+            logger.warning(f"zz命令格式错误: {msg}")
             return {"type": "text", "msg": "是 /zz <X目标坐标> <Z目标坐标> 喵～"}
 
         try:
             x = int(position[1])
             z = int(position[2])
         except ValueError:
+            logger.warning(f"目标坐标格式错误: x: {position[1]}, z: {position[2]}")
             return {"type": "text", "msg": "是 /zz <X目标坐标> <Z目标坐标> 喵～"}
 
         res = await self.pearl_calculator_util.pearl_calculator(x, z)
         if res.get("msg") != "success":
+            logger.warning(f"珍珠炮计算失败: {res.get('msg', '')}")
             return {"type": "text", "msg": res.get("msg", "")}
         image_path = await self.image_utils.generate_zz_image(res.get("data", {}))
         return {"type": "image", "msg": image_path}
