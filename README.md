@@ -5,7 +5,7 @@
 ## 插件信息
 - 插件名称：`astrbot_plugin_mc_admin`
 - 作者：`Xc_Star`
-- 当前版本：`1.4.2`
+- 当前版本：`1.5.0`
 - 仓库地址：[https://github.com/Xc-Star/astrbot_plugin_mc_admin](https://github.com/Xc-Star/astrbot_plugin_mc_admin)
 
 ## 依赖与启动提醒
@@ -55,6 +55,7 @@
 /task <工程名> ｜ 查看工程信息
 /task claim <工程名> <材料编号> ｜ 认领材料
 /task commit <工程名> <材料编号> <n个/组/盒> <位置/假人> ｜ 备货完成后提交材料
+/task export <工程名> | 导出材料列表为xlsx
 ```
 
 `/task add` 后，机器人会提示你上传文件。支持上传 `txt`、`csv`、`litematic` 三种格式。
@@ -92,5 +93,6 @@
 | `direction_bit` | string | `""` | 方位编码映射（ESWN，逗号分隔）              |
 
 ## 注意事项
+- 导出材料列表功能必须 NapCat 和 Astrbot 在相同环境下，如 Astrbot 在本机 NapCat 在容器, NapCat 会读取不到本机 Astrbot 生成的xlsx文件
 - `servers` 配置错误会导致相关命令无法连通 RCON。
 - 详细的配置介绍：`BV`
