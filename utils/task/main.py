@@ -1,8 +1,11 @@
 import json
 import os
+import shutil
 import sqlite3
 
 from cachetools import TTLCache
+from openpyxl import load_workbook
+from openpyxl.styles import Alignment, Border, Side
 
 from astrbot.api import logger
 from astrbot.core.platform import AstrMessageEvent
@@ -85,8 +88,84 @@ class TaskUtils:
             res += f"\t-{row[0]}\n"
         return res
 
-    def export_task(self):
-        pass
+    def export_task(self, name: str) -> tuple[str, str, int]:
+        """导出工程为 Excel 文件
+
+        Returns:
+            tuple: (file_path, file_name, code)
+        """
+        task_id_sql = "SELECT id FROM task WHERE name = ?"
+        task_id_res = self.conn.execute(task_id_sql, (name,)).fetchone()
+        if not task_id_res:
+            return None, None, 404
+
+        task_id = task_id_res[0]
+        material_list_sql = "SELECT * FROM material WHERE task_id = ?"
+        material_list_res = self.conn.execute(material_list_sql, (task_id,)).fetchall()
+        if not material_list_res:
+            return None, None, 404
+
+        material_list = [
+            {
+                "name": row[1],
+                "name_id": row[2],
+                "total": row[3],
+                "recipient": row[4],
+                "commit_count": row[5],
+                "number": row[6],
+            }
+            for row in material_list_res
+        ]
+
+        template_path = os.path.join(
+            self.config_utils.get_plugin_path(), "template", "taskExportTemplate.xlsx"
+        )
+        output_dir = os.path.join(self.config_utils.get_plugin_path(), "data")
+        os.makedirs(output_dir, exist_ok=True)
+        file_name = f"{name}.xlsx"
+        excel_file_path = os.path.join(output_dir, file_name)
+
+        shutil.copy(template_path, excel_file_path)
+        wb = load_workbook(excel_file_path)
+        ws = wb.active
+
+        thin_border = Border(
+            left=Side(style="thin"),
+            right=Side(style="thin"),
+            top=Side(style="thin"),
+            bottom=Side(style="thin"),
+        )
+
+        for mat in material_list:
+            total = mat["total"]
+            required_chest_boxes = round(total / 1728 / 54, 2) if total > 0 else 0
+            required_boxes = round(total / 1728, 2) if total > 0 else 0
+            required_stacks = round(total / 64, 2) if total > 0 else 0
+            is_complete = "是" if mat["commit_count"] >= total else "否"
+            progress = round(mat["commit_count"] / total * 100, 1) if total > 0 else 0
+
+            row_data = [
+                mat["name"],
+                is_complete,
+                total,
+                required_chest_boxes,
+                required_boxes,
+                required_stacks,
+                total,
+                mat["recipient"] or "",
+                f"{progress}%",
+                "",
+            ]
+            ws.append(row_data)
+
+            for col_idx in range(1, 11):
+                cell = ws.cell(row=ws.max_row, column=col_idx)
+                cell.border = thin_border
+                cell.alignment = Alignment(horizontal="center", vertical="center")
+
+        wb.save(excel_file_path)
+
+        return excel_file_path, file_name, 200
 
     def get_task_by_name(self, name) -> dict:
         sql = "select * from task where name = ?"

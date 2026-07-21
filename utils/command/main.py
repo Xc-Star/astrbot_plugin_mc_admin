@@ -535,6 +535,11 @@ class CommandUtils:
             logger.info(f"开始执行提交材料命令")
             return self._handle_task_commit(msg)
 
+        # 导出 Excel 文件
+        if msg.startswith("task export"):
+            logger.info(f"开始执行导出 Excel 文件命令")
+            return self._handle_task_export(msg)
+
         # 查看工程详情
         if msg.startswith("task"):
             logger.info(f"开始执行查看工程详情命令")
@@ -694,6 +699,20 @@ class CommandUtils:
                 task_name, material_number, location, individual, stack, shulker
             ),
         }
+
+    def _handle_task_export(self, msg: str) -> TaskResponse:
+        """处理导出 Excel 文件"""
+        parts = msg.split(" ")
+        if len(parts) != 3:
+            logger.warning(f"task export命令格式错误: {msg}")
+            return {"type": "text", "msg": "是/task export <工程名字>喵~"}
+
+        task_name = parts[2]
+        excel_file_path, file_name, code = self.task_utils.export_task(task_name)
+        if code != 200:
+            logger.warning(f"导出 Excel 文件失败: {task_name}")
+            return {"type": "text", "msg": f"导出 Excel 文件失败: {task_name} 不存在喵～"}
+        return {"type": "file", "file_path": excel_file_path, "file_name": file_name}
 
     async def _handle_task_query(self, msg: str) -> TaskResponse:
         """处理任务查询"""

@@ -7,3 +7,4 @@ numba
 httpx
 jinja2
 chardet
+openpyxl

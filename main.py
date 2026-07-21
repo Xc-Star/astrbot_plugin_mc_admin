@@ -1,5 +1,6 @@
 import asyncio
 import sys
+import astrbot.api.message_components as Comp
 from astrbot.api.event import filter, AstrMessageEvent
 from astrbot.api.star import Context, Star, register
 from astrbot.api import logger
@@ -186,6 +187,12 @@ class McAdminPlugin(Star):
             assert isinstance(result["msg"], list)
             for img in result["msg"]:
                 yield event.image_result(img)
+        elif result["type"] == "file":
+            chain = [
+                Comp.File(file=result.get("file_path"), name=result.get("file_name"))
+            ]
+            yield event.chain_result(chain)
+
 
     @filter.command("zz")
     @in_enabled_groups()
