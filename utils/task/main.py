@@ -11,7 +11,7 @@ from astrbot.api import logger
 from astrbot.core.platform import AstrMessageEvent
 
 from ..config_utils import ConfigUtils
-from ..fileparse.main import FileParser
+from ..file_parse.main import FileParser
 from ..http import HttpUtils
 from ..media.image import ImageUtils
 

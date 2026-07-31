@@ -6,7 +6,7 @@ from .loc.result import LocResult
 from .decorators import in_enabled_groups, requires_enabled
 from .db.main import DbUtils
 from .http import AsyncHttpClient, HttpUtils
-from .fileparse.item_mapping import ItemMapping, item_mapping
+from .file_parse.item_mapping import ItemMapping, item_mapping
 from .command.helpers import (
     PERMISSION_DENIED,
     LOC_ADD_RE,

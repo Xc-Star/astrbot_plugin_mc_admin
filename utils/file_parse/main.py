@@ -71,7 +71,7 @@ class FileParser:
         """加载材料过滤和映射配置文件"""
         try:
             # 获取配置文件路径（插件根目录/data/material_filter_config.json）
-            current_dir = os.path.dirname(os.path.abspath(__file__))  # utils/fileparse
+            current_dir = os.path.dirname(os.path.abspath(__file__))  # utils/file_parse
             plugin_root = os.path.dirname(os.path.dirname(current_dir))  # 插件根目录
             config_path = os.path.join(plugin_root, 'data', 'material_filter_config.json')
             

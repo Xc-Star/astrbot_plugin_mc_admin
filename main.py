@@ -11,12 +11,9 @@ from .utils.db import DbUtils
 from cachetools import TTLCache
 
 
-# TODO: 1. 区块回档
-# TODO: 2. 大模型自动生成命令，适配carpet
-# 3. MCDR命令
-# 4. 服群聊天
-# 5. 服务器状态监控
-# 6. Wiki查询
+# TODO: 区块回档
+# TODO: 镜像同步
+# TODO: 大模型自动生成命令，适配carpet
 @register(
     "astrbot_plugin_mc_admin",
     "Xc_Star",

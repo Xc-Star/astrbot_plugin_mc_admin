@@ -11,7 +11,7 @@ class ItemMapping:
         """初始化物品映射"""
         if mapping_file_path is None:
             # 计算插件根目录下的 data/item_mapping.json
-            # 当前文件位于: <plugin_root>/utils/fileparse/item_mapping.py
+            # 当前文件位于: <plugin_root>/utils/file_parse/item_mapping.py
             current_dir = os.path.dirname(os.path.abspath(__file__))
             utils_dir = os.path.dirname(current_dir)
             plugin_root = os.path.dirname(utils_dir)
