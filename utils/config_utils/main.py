@@ -12,6 +12,7 @@ class ConfigUtils:
         self.enable_groups = config.get("enabled_groups")
         self.bot_prefix = config.get("bot_prefix")
         self.server_list = self._parse_server_list(config.get("servers_config"))
+        self.cca_client_url = config.get("cca_client_url")
 
         self.enable_whitelist_compare = config.get("enable_whitelist_compare")
         self.enable_background_image = config.get("enable_background_image")
@@ -33,6 +34,9 @@ class ConfigUtils:
     def get_server_list(self) -> list[dict]:
         return self.server_list
 
+    def get_cca_client_url(self) -> str:
+        return str(self.cca_client_url).strip()
+
     def _parse_server_list(self, servers_config) -> list[dict]:
         raw_servers = self._load_servers_config(servers_config)
         server_list = []
@@ -49,21 +53,12 @@ class ConfigUtils:
             if not name or not host or port is None or not password:
                 continue
 
-            mcdr_ip = str(server.get("mcdr_ip", "")).strip()
-            mcdr_token = str(server.get("mcdr_token", "")).strip()
-            mcdr_port = self._parse_int(server.get("mcdr_port"))
-            has_mcdr = bool(mcdr_ip and mcdr_token and mcdr_port is not None)
-
             server_list.append(
                 {
                     "name": name,
                     "host": host,
                     "port": port,
                     "password": password,
-                    "mcdr_ip": mcdr_ip,
-                    "mcdr_port": mcdr_port,
-                    "mcdr_token": mcdr_token,
-                    "has_mcdr": has_mcdr,
                 }
             )
 

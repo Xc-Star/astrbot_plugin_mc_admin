@@ -29,12 +29,12 @@ MAX_TICK_LIMIT = 100  # Maximum tick limit for finding solutions
 
 def load_config(config_str: str) -> dict:
     if config_str == '' or config_str is None:
-        return {"data": None, "msg": "还没有珍珠炮的配置喵～"}
+        return {"data": None, "msg": "还没有珍珠炮的配置喵~"}
     try:
         pearl_config = json.loads(config_str)
         return {"data": pearl_config, "msg": "success"}
     except json.decoder.JSONDecodeError:
-        return {"data": None, "msg": "珍珠炮配置格式错误喵～"}
+        return {"data": None, "msg": "珍珠炮配置格式错误喵~"}
 
 
 def parse_space3d(data: dict) -> Space3D:
@@ -158,7 +158,7 @@ class PearlCalculatorUtils:
         """
         # 校验珍珠版本
         if self.pearl_version == "UNKNOWN":
-            return {"data": None, "msg": "游戏版本识别失败喵～"}
+            return {"data": None, "msg": "游戏版本识别失败喵~"}
         # 加载配置文件
         pearl_config = load_config(self.config)
         if pearl_config["msg"] != "success":

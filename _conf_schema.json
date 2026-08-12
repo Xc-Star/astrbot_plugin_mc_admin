@@ -15,7 +15,13 @@
         "description": "服务器列表",
         "type": "text",
         "hint": "配置服务器列表，名字用于区分服务器：rcon用于执行MC命令。mcdr用于执行mcdr命令(非必填)，mcdr需要安装console_command_api插件(如果bot插件版本为v1，mcdr插件也需要是v1，强烈建议升级v2)。可前往 https://pearl.zxqblog.cn/servers_config_gender.html 进行可视化配置",
-        "default": "[\n    {\n        \"name\": \"生存服\",\n        \"rcon_ip\": \"127.0.0.1\",\n        \"rcon_port\": 25575,\n        \"rcon_password\": \"password\",\n        \"mcdr_ip\": \"127.0.0.1\",\n        \"mcdr_port\": 8000,\n        \"mcdr_token\": \"<token>\"\n    },\n    {\n        \"name\": \"创造服\",\n        \"rcon_ip\": \"127.0.0.1\",\n        \"rcon_port\": 25576,\n        \"rcon_password\": \"password\",\n        \"mcdr_ip\": \"127.0.0.1\",\n        \"mcdr_port\": 8001,\n        \"mcdr_token\": \"<token>\"\n    }\n]"
+        "default": "[\n    {\n        \"name\": \"生存服\",\n        \"rcon_ip\": \"127.0.0.1\",\n        \"rcon_port\": 25575,\n        \"rcon_password\": \"password\"\n    },\n    {\n        \"name\": \"创造服\",\n        \"rcon_ip\": \"127.0.0.1\",\n        \"rcon_port\": 25576,\n        \"rcon_password\": \"password\"\n    }\n]"
+    },
+    "cca_client_url": {
+        "description": "CCA Client 地址",
+        "type": "string",
+        "hint": "CCA Client 的 HTTP API 监听地址与 token 英文逗号分隔（如：http://127.0.0.1:8000,token）。\n上一项配置的服务器名字必须与 mcdr 的 console_command_api 插件配置的名字一致。",
+        "default": ""
     },
     "enable_whitelist_compare": {
         "description": "list命令是否开启白名单对比",
@@ -62,7 +68,7 @@
     "pearl_version": {
         "description": "游戏版本",
         "type": "string",
-        "hint": "实体运动计算改过两次，该配置用于适配不同版本。Legacy：1.13～1.20.4，1205：1.20.5～1.21.1，1212：1.21.2+",
+        "hint": "实体运动计算改过两次，该配置用于适配不同版本。Legacy：1.13~1.20.4，1205：1.20.5~1.21.1，1212：1.21.2+",
         "default": "1212"
     },
     "real_red_color": {

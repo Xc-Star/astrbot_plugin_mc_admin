@@ -5,7 +5,7 @@
 ## 插件信息
 - 插件名称：`astrbot_plugin_mc_admin`
 - 作者：`Xc_Star`
-- 当前版本：`1.5.0`
+- 当前版本：`2.0.0`
 - 仓库地址：[https://github.com/Xc-Star/astrbot_plugin_mc_admin](https://github.com/Xc-Star/astrbot_plugin_mc_admin)
 
 ## 依赖与启动提醒
@@ -13,6 +13,7 @@
 - 插件初始化时会自动检查并安装 Chromium；首次安装可能较慢，取决于网络。
 - 如果依赖安装完成后 AstrBot 插件页未立即显示插件，重启 AstrBot 一般可恢复。
 - 若上传工程材料文件时提示 `packetBackend` 不可用，请检查 NapCatQQ 版本与 `packetBackend` 配置。
+- MCDR命令功能依赖MCDR的[CCA插件](https://github.com/Xc-Star/console_command_api)；v1.x的astrbot插件依赖v1的MCDR插件，v2.x的astrbot插件依赖v2的MCDR插件
 
 ## 功能概览
 - 在线玩家列表
@@ -78,6 +79,7 @@
 | `enabled_groups` | list | `[]` | 允许触发插件的群列表                     |
 | `bot_prefix` | string | `bot_` | 假人前缀（白名单比对关闭时用于区分真玩家/假人）       |
 | `servers` | list | `[]` | 服务器配置，格式：`名字:地址:端口:RCON密码`     |
+| `cca_client_url` | string | `""` | CCA Client HTTP监听地址配置，格式：`http://IP:端口,token`     |
 | `enable_whitelist_compare` | bool | `false` | `/list` 是否使用白名单辅助识别真人玩家        |
 | `enable_background_image` | bool | `true` | 是否启用列表背景图                      |
 | `enable_background_image_random` | bool | `false` | 是否启用 `/抽卡`                     |

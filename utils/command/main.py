@@ -83,6 +83,8 @@ class CommandUtils:
 
         # 服务器与连接池
         self.servers = self.config_utils.get_server_list()
+        # cca 地址
+        self.cca_url = self.config_utils.get_cca_client_url()
 
         # 白名单工具
         self.whitelist_utils = WhitelistUtils(
@@ -168,6 +170,15 @@ class CommandUtils:
 
     async def mcdr(self, msg: str, event: AstrMessageEvent) -> McResponse:
         """处理 MCDR HTTP 命令。"""
+
+        # 检查是否配置cca
+        if not self.cca_url or self.cca_url == "":
+            return {
+                "type": "text",
+                "msg": f"CCA Client 还没有配置喵~",
+            }
+
+        # 校验用户发送的命令格式
         if not event.is_admin():
             return {"type": "text", "msg": self.PERMISSION_DENIED}
 
@@ -178,34 +189,11 @@ class CommandUtils:
                 "type": "text",
                 "msg": "是/mcdr <服务器名> <MCDR命令>喵~",
             }
-
         server_name, command = match.groups()
-        server = find_server_by_name(self.servers, server_name)
-        if server is None:
-            logger.warning(f"没找到服务器: {server_name}")
-            return {"type": "text", "msg": f'没找到"{server_name}"喵~'}
 
-        if not server.get("has_mcdr"):
-            logger.warning(f"服务器{server_name}还没有配置 MCDR 接口")
-            return {
-                "type": "text",
-                "msg": f"服务器{server_name}还没有配置 MCDR 接口喵~",
-            }
-
+        # 发送MCDR命令
         try:
-            send_result = await send_mcdr_command(server, command.strip())
-        except httpx.HTTPStatusError as e:
-            logger.warning(f"MCDR 接口请求失败: {e}")
-            return {
-                "type": "text",
-                "msg": f"MCDR 接口请求失败喵~\nHTTP {e.response.status_code}",
-            }
-        except httpx.HTTPError as e:
-            logger.warning(f"MCDR 接口连接失败: {e}")
-            return {"type": "text", "msg": f"MCDR 接口连接失败喵~\n{e}"}
-        except ValueError as e:
-            logger.warning(f"MCDR 命令格式错误: {e}")
-            return {"type": "text", "msg": str(e)}
+            send_result = await send_mcdr_command(self.cca_url, server_name, command.strip())
         except Exception as e:
             logger.error(f"执行 MCDR 命令失败: {e}")
             return {"type": "text", "msg": f"执行 MCDR 命令失败喵~\n{e}"}
@@ -711,7 +699,7 @@ class CommandUtils:
         excel_file_path, file_name, code = self.task_utils.export_task(task_name)
         if code != 200:
             logger.warning(f"导出 Excel 文件失败: {task_name}")
-            return {"type": "text", "msg": f"导出 Excel 文件失败: {task_name} 不存在喵～"}
+            return {"type": "text", "msg": f"导出 Excel 文件失败: {task_name} 不存在喵~"}
         return {"type": "file", "file_path": excel_file_path, "file_name": file_name}
 
     async def _handle_task_query(self, msg: str) -> TaskResponse:
@@ -860,14 +848,14 @@ class CommandUtils:
         position = msg.split()
         if len(position) != 3:
             logger.warning(f"zz命令格式错误: {msg}")
-            return {"type": "text", "msg": "是 /zz <X目标坐标> <Z目标坐标> 喵～"}
+            return {"type": "text", "msg": "是 /zz <X目标坐标> <Z目标坐标> 喵~"}
 
         try:
             x = int(position[1])
             z = int(position[2])
         except ValueError:
             logger.warning(f"目标坐标格式错误: x: {position[1]}, z: {position[2]}")
-            return {"type": "text", "msg": "是 /zz <X目标坐标> <Z目标坐标> 喵～"}
+            return {"type": "text", "msg": "是 /zz <X目标坐标> <Z目标坐标> 喵~"}
 
         res = await self.pearl_calculator_util.pearl_calculator(x, z)
         if res.get("msg") != "success":

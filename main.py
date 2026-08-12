@@ -18,7 +18,7 @@ from cachetools import TTLCache
     "astrbot_plugin_mc_admin",
     "Xc_Star",
     "这是 Minecraft 服务器 的管理插件，支持群组服，RCON命令，list，珍珠炮落点计算，服务器工程坐标，备货清单，白名单管理等功能",
-    "1.5.0",
+    "2.0.0",
     "https://github.com/Xc-Star/astrbot_plugin_mc_admin",
 )
 class McAdminPlugin(Star):
@@ -121,7 +121,7 @@ class McAdminPlugin(Star):
         sender_name = event.get_sender_name()
         send_msg = f"{sender_name}: {msg}"
         await self.command_utils.broadcast_msg(send_msg)
-        yield event.plain_result("帮你发过去了喵～")
+        yield event.plain_result("帮你发过去了喵~")
 
     @filter.command("loc")
     @in_enabled_groups()
@@ -211,7 +211,7 @@ class McAdminPlugin(Star):
             logger.warning(f"wiki命令未输入问题")
             yield event.plain_result("请输入要查询的内容喵~\n用法: wiki <问题>")
             return
-        yield event.plain_result("等我查查喵～")
+        yield event.plain_result("等我查查喵~")
         result = await self.command_utils.wiki(question)
         yield event.plain_result(result["msg"])
 

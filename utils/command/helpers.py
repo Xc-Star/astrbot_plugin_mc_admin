@@ -39,30 +39,28 @@ async def send_command(server: Dict, command: str) -> str:
     )
 
 
-async def send_mcdr_command(server: Dict, command: str) -> str:
+async def send_mcdr_command(cca_url: str, server_name: str, command: str) -> str:
     """通过 MCDR console_command_api 执行命令并返回输出。"""
-    if not server.get("has_mcdr"):
-        logger.warning(
-            f"服务器 {server.get('name', '未知')} 未配置 MCDR 接口，无法执行命令: {command}"
-        )
-        raise ValueError("这个服务器还没有配置 MCDR 接口喵~")
+    if not cca_url or not isinstance(cca_url, str):
+        return "CCA Client 还没有配置喵~"
+    if not cca_url.startswith(('http://', 'https://')):
+        return "CCA Client 配置的地址不对喵~"
 
     command = normalize_mcdr_command(command)
-    server_name = server.get("name", "未知")
 
-    base_url = str(server["mcdr_ip"]).strip()
-    if not base_url.startswith(("http://", "https://")):
-        base_url = f"http://{base_url}"
-    base_url = base_url.rstrip("/")
-    url = f"{base_url}:{server['mcdr_port']}/execute"
+    try:
+        url = f"{cca_url.split(",")[0]}/api/command"
+        token = cca_url.split(",")[1].strip()
+    except IndexError:
+        return "CCA 配置格式不对喵~"
     headers = {
-        "Authorization": f"Bearer {server['mcdr_token']}",
+        "Authorization": f"Bearer {token}",
         "Content-Type": "application/json",
     }
 
     try:
         async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
-            response = await client.post(url, headers=headers, json={"command": command})
+            response = await client.post(url, headers=headers, json={"command": command, "server_name": server_name})
             response.raise_for_status()
     except httpx.HTTPStatusError as e:
         logger.error(
@@ -85,6 +83,8 @@ async def send_mcdr_command(server: Dict, command: str) -> str:
         )
         raise ValueError("MCDR 接口返回了无法解析的数据喵~") from e
 
+    if payload.get("code") == 404:
+        return f"\"{server_name}\"没有与 CCA Client 连接喵~"
     if payload.get("code") != 200:
         logger.error(
             f"服务器 {server_name} 的 MCDR 接口返回失败: "
