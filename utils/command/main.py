@@ -18,7 +18,7 @@ from ..command.helpers import (
     MCDR_COMMAND_RE,
     find_server_by_name,
     send_command,
-    send_mcdr_command,
+    send_cca_command,
     parse_list_players,
     get_whitelist,
     split_players_by_whitelist,
@@ -88,7 +88,7 @@ class CommandUtils:
 
         # 白名单工具
         self.whitelist_utils = WhitelistUtils(
-            conn, self.servers, self.config_utils.get_bot_prefix()
+            conn, self.servers, self.config_utils.get_bot_prefix(), self.config_utils
         )
 
         # 常量
@@ -103,34 +103,6 @@ class CommandUtils:
             parts = msg.split()
             command = " ".join(parts[1:])
             return await self.wl(command, event)
-
-        if msg.startswith("mc status"):
-            """获取服务器状态"""
-            logger.info(f"开始执行mc status命令")
-            async def get_server_status(
-                    server: Dict,
-            ) -> Optional[Tuple[str, bool]]:
-                """处理单个服务器的状态"""
-                try:
-                    await send_command(server, "list")
-                    return server["name"], True
-                except Exception:
-                    return server["name"], False
-
-            # 并发处理所有服务器
-            tasks = [get_server_status(s) for s in self.servers]
-            results = await asyncio.gather(*tasks, return_exceptions=True)
-
-            # 汇总结果
-            servers_status: Dict[str, bool] = {}
-            for r in results:
-                if isinstance(r, tuple) and len(r) == 2:
-                    name, status = r
-                    servers_status[name] = status
-
-            # 生成状态图片
-            image_path = await self.image_utils.generate_status_image(servers_status)
-            return {"type": "image", "msg": image_path}
 
         if msg.startswith("mc reset"):
             logger.info(f"开始执行mc reset命令")
@@ -148,18 +120,20 @@ class CommandUtils:
 
         # mc command <服务器> <命令...>
         if len(arr) >= 3 and arr[1] == "command":
+            
             logger.info(f"开始执行mc command命令")
             if not event.is_admin():
                 logger.warning(f"用户{event.get_sender_name()}({event.get_sender_id()})没有权限执行mc command命令")
                 return {"type": "text", "msg": self.PERMISSION_DENIED}
-            server = find_server_by_name(self.servers, arr[2])
-            if server is None:
-                logger.warning(f"找不到服务器: {arr[2]}")
-                return {"type": "text", "msg": "找不到服务器喵~"}
+            server_name = arr[2]
+
+            # 获取命令
             match = MC_COMMAND_RE.match(msg)
             command = match.group(1) if match else ""
+
+            # 执行命令
             logger.info(f"开始执行mc command命令: 服务器: {arr[2]}, 命令: {command}")
-            send_result = await send_command(server, command)
+            send_result = await send_command(self.config_utils, server_name, command)
             logger.info(f"mc command命令执行结果: {send_result}")
             return {"type": "text", "msg": send_result}
 
@@ -193,7 +167,7 @@ class CommandUtils:
 
         # 发送MCDR命令
         try:
-            send_result = await send_mcdr_command(self.cca_url, server_name, command.strip())
+            send_result = await send_cca_command(self.cca_url, server_name, command.strip())
         except Exception as e:
             logger.error(f"执行 MCDR 命令失败: {e}")
             return {"type": "text", "msg": f"执行 MCDR 命令失败喵~\n{e}"}
@@ -202,14 +176,15 @@ class CommandUtils:
     
     async def broadcast_msg(self, msg: str) -> None:
         """广播消息到所有服务器"""
-        async def send_broadcast(server: Dict):
+        async def send_broadcast(server_name: str):
             try:
-                await send_command(server, f'say {msg}')
+                await send_command(self.config_utils, server_name, f'say {msg}')
             except Exception:
-                logger.warning(f"向服务器 {server['name']} 发送广播消息失败")
+                logger.warning(f"向服务器 {server_name} 发送广播消息失败")
             
         # 并发发送广播消息到所有服务器，忽略发送失败的服务器
-        await asyncio.gather(*[send_broadcast(s) for s in self.servers], return_exceptions=True)
+        server_list = await self.config_utils.get_online_servers_name()
+        await asyncio.gather(*[send_broadcast(s) for s in server_list], return_exceptions=True)
 
     # ==================== 玩家列表 ====================
     async def list_players(self) -> str:
@@ -217,19 +192,19 @@ class CommandUtils:
         bot_prefix = self.config_utils.get_bot_prefix()
 
         async def process_server(
-            server: Dict,
+            server_name: str,
         ) -> Optional[Tuple[str, Dict[str, List[str]]]]:
             """处理单个服务器的玩家列表"""
             try:
-                res = await send_command(server, "list")
-                logger.debug(f"给{server['name']}发送list命令结果: {res}")
+                res = await send_command(self.config_utils, server_name, "list")
+                logger.debug(f"给{server_name}发送list命令结果: {res}")
             except Exception:
-                logger.warning(f"给{server['name']}发送list命令失败")
+                logger.warning(f"给{server_name}发送list命令失败")
                 return None
 
             players = parse_list_players(res)
             if not players:
-                return server["name"], {"bot_players": [], "real_players": []}
+                return server_name, {"bot_players": [], "real_players": []}
 
             # 根据配置选择分类方式
             if self.config_utils.enable_whitelist_compare:
@@ -247,14 +222,14 @@ class CommandUtils:
             else:
                 bot_players, real_players = split_players_by_prefix(players, bot_prefix)
 
-            return server["name"], {
+            return server_name, {
                 "bot_players": bot_players,
                 "real_players": real_players,
             }
 
         # 并发处理所有服务器
         logger.info(f"并发给所有服务器发送list命令")
-        tasks = [process_server(s) for s in self.servers]
+        tasks = [process_server(s) for s in await self.config_utils.get_online_servers_name()]
         results = await asyncio.gather(*tasks, return_exceptions=True)
         logger.debug(f"并发给所有服务器发送list命令结果: {results}")
 
@@ -329,25 +304,13 @@ class CommandUtils:
 
     async def _handle_wl_list(self) -> McResponse:
         """处理白名单列表查询"""
-        wl_list = await get_whitelist(self.servers)
+        wl_list = await get_whitelist(self.config_utils)
         if len(wl_list) == 0:
             return {"type": "text", "msg": "没有白名单喵~"}
 
         sorted_wl_list = sorted(wl_list, key=lambda name: name.casefold())
         image_path = await self.image_utils.generate_whitelist_image(sorted_wl_list)
         return {"type": "image", "msg": image_path}
-
-    # async def _handle_wl_operation(self, operation: str, player_name: str) -> str:
-    #     """处理白名单添加/移除操作"""
-    #     async def do_op(server: Dict):
-    #         try:
-    #             await send_command(server, f'whitelist {operation} {player_name}')
-    #         except Exception:
-    #             pass
-    #
-    #     await asyncio.gather(*[do_op(s) for s in self.servers], return_exceptions=True)
-    #     method = '添加到' if operation == 'add' else '移除'
-    #     return f'已将{player_name}{method}白名单喵~'
 
     # ==================== 位置管理 ====================
     async def loc(self, msg: str, event: AstrMessageEvent) -> McResponse:

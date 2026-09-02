@@ -1,5 +1,6 @@
 import re
 from typing import Dict, List, Optional, Tuple
+from ..config_utils import ConfigUtils
 
 import httpx
 from astrbot.api import logger
@@ -29,17 +30,49 @@ def find_server_by_name(servers: List[Dict], name: str) -> Optional[Dict]:
     return None
 
 
-async def send_command(server: Dict, command: str) -> str:
+async def send_command(config: ConfigUtils, server_name: str, command: str) -> str:
     """发送 RCON 命令。"""
-    return await rcon_send(
-        host=server["host"],
-        passwd=server["password"],
-        port=int(server["port"]),
-        command=command,
-    )
+    # 获取 CCA 配置
+    cca_url = config.get_cca_client_url()
+
+    # 如果有 CCA
+    if cca_url is not None and cca_url != "" and isinstance(cca_url, str):
+        if not cca_url.startswith(('http://', 'https://')):
+            return f"CCA Client 配置的地址不对喵~"
+        # 获取 CCA 的服务器列表
+        try:
+            headers = {"Authorization": f"Bearer {cca_url.split(',')[1].strip()}"}
+            cca_servers = httpx.get(f"{cca_url.split(',')[0]}/api/servers", headers=headers).json().get("data", [])
+        except Exception as e:
+            logger.error(f"获取 CCA 服务器列表失败: {e}")
+            cca_servers = []
+
+    # 获取配置的服务器列表
+    configured_servers = config.get_server_list()
+
+    # 如果是 CCA 的服务器，走 send_cca_command 方法
+    if cca_url and isinstance(cca_url, str) and server_name in cca_servers:
+        if not command.startswith("/"):
+            command = "/" + command
+        res = await send_cca_command(cca_url, server_name, command)
+        # 接去掉 MCDR 的日志部分 “[00:00:00] [Server thread/INFO]: ”
+        res = re.sub(r"^\[\d{2}:\d{2}:\d{2}\] \[Server thread/INFO\]: ", "", res, flags=re.MULTILINE)
+        return res
+
+    # 不是的话走 RCON
+    server = find_server_by_name(configured_servers, server_name)
+    if server:
+        return await rcon_send(
+            host=server["host"],
+            passwd=server["password"],
+            port=int(server["port"]),
+            command=command,
+        )
+    
+    return f"没找到服务器 {server_name} 喵~"
 
 
-async def send_mcdr_command(cca_url: str, server_name: str, command: str) -> str:
+async def send_cca_command(cca_url: str, server_name: str, command: str) -> str:
     """通过 MCDR console_command_api 执行命令并返回输出。"""
     if not cca_url or not isinstance(cca_url, str):
         return "CCA Client 还没有配置喵~"
@@ -112,7 +145,6 @@ async def send_mcdr_command(cca_url: str, server_name: str, command: str) -> str
 
     return "没有返回结果喵~"
 
-
 def strip_mc_format_codes(text: str) -> str:
     """移除 Minecraft 文本中的 § 样式代码。"""
     return MC_FORMAT_CODE_RE.sub("", text)
@@ -128,7 +160,7 @@ def parse_list_players(res: str) -> List[str]:
     if not res or ":" not in res:
         return []
     try:
-        players_str = res.split(":", 1)[1]
+        players_str = res.rsplit(":", 1)[1]
         if not players_str.strip():
             return []
         return [p.strip() for p in players_str.split(",") if p.strip()]
@@ -136,26 +168,28 @@ def parse_list_players(res: str) -> List[str]:
         return []
 
 
-async def get_whitelist(servers: List[Dict]) -> List[str]:
+async def get_whitelist(config_utils: ConfigUtils) -> List[str]:
     """获取白名单。"""
-    wl = None
-    for server in servers:
+    servers = await config_utils.get_online_servers_name()
+    wl = []
+    for server_name in servers:
         try:
-            wl = await send_command(server, "whitelist list")
-            break
+            res = await send_command(config_utils, server_name, "whitelist list")
+            if "There are no whitelisted players" in res or res is None:
+                continue
+            # 最后一个冒号往后是玩家列表
+            players_start = res.rfind(":") + 1
+            players_str = res[players_start:].strip()
+            wl.extend([player.strip() for player in players_str.split(",") if player.strip()])
         except EmptyResponse:
-            logger.error(
-                f"服务器 {server['name']} 连接失败，请检查配置是否正确，并且检查服务器是否已开启RCON服务"
+            logger.warning(
+                f"服务器 {server_name} 连接失败，请检查配置是否正确，并且检查服务器是否已开启RCON服务"
             )
             continue
         except Exception as e:
-            logger.error(f"服务器 {server['name']} 白名单查询失败: {e}")
+            logger.error(f"服务器 {server_name} 白名单查询失败: {e}")
             continue
-    if wl == "There are no whitelisted players" or wl is None:
-        return []
-    players_start = wl.find(":") + 1
-    players_str = wl[players_start:].strip()
-    return [player.strip() for player in players_str.split(",") if player.strip()]
+    return list(dict.fromkeys(wl))
 
 
 def split_players_by_whitelist(

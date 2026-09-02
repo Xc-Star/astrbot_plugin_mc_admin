@@ -1,5 +1,6 @@
 import sqlite3
 from typing import Tuple, Dict, Optional
+from ..config_utils import ConfigUtils
 
 import asyncio
 import httpx
@@ -20,10 +21,11 @@ REQUEST_TIMEOUT = 10
 
 class WhitelistUtils:
 
-    def __init__(self, conn: sqlite3.Connection, servers: list[dict], bot_prefix: str):
+    def __init__(self, conn: sqlite3.Connection, servers: list[dict], bot_prefix: str, config_utils: ConfigUtils):
         self.conn = conn
         self.servers = servers
         self.bot_prefix = bot_prefix
+        self.config_utils = config_utils
         self.http = AsyncHttpClient(timeout=REQUEST_TIMEOUT)
         
         # 查询user_profile表是否有数据
@@ -139,7 +141,7 @@ class WhitelistUtils:
             cursor.execute("DELETE FROM user_profile")
 
             # 获取服务器内白名单
-            whitelist = await get_whitelist(self.servers)
+            whitelist = await get_whitelist(self.config_utils)
             if len(whitelist) == 0:
                 self.conn.commit()
                 logger.info("白名单为空，跳过初始化")
@@ -240,7 +242,7 @@ class WhitelistUtils:
             return True
 
         # 检查服务器白名单（防止在游戏内添加白名单，没有存在数据库里）
-        whitelist_list = await get_whitelist(self.servers)
+        whitelist_list = await get_whitelist(self.config_utils)
         if username in whitelist_list:
             if await self._sync_whitelist_user_to_db(username):
                 logger.debug(f"根据服务器白名单判断{username}为真人玩家")
@@ -269,13 +271,13 @@ class WhitelistUtils:
     
     async def _execute_whitelist_command(self, operation: str, username: str) -> None:
         """在所有服务器上执行白名单命令"""
-        async def do_op(server: Dict):
+        async def do_op(server_name: str):
             try:
-                await send_command(server, f'whitelist {operation} {username}')
+                await send_command(self.config_utils, server_name, f'whitelist {operation} {username}')
             except Exception:
-                logger.warning(f"在服务器 {server['name']} 上执行白名单命令失败: {operation} {username}")
+                logger.warning(f"在服务器 {server_name} 上执行白名单命令失败: {operation} {username}")
         
-        await asyncio.gather(*[do_op(s) for s in self.servers], return_exceptions=True)
+        await asyncio.gather(*[do_op(s) for s in await self.config_utils.get_online_servers_name()], return_exceptions=True)
     
     async def _add_user_to_whitelist(self, username: str) -> Tuple[bool, str]:
         """添加用户到白名单"""
@@ -284,7 +286,7 @@ class WhitelistUtils:
         if not data or data.get("errorMessage"):
             return False, '没查到UUID喵~'
         
-        uuid = data.get("id")
+        uuid: str = str(data.get("id"))
         # 检查是否已存在
         if self._uuid_exists_in_db(uuid):
             return False, '该玩家已在白名单中喵~'

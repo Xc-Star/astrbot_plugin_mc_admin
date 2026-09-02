@@ -2,6 +2,8 @@ import json
 import os
 from pathlib import Path
 from urllib.request import pathname2url
+from astrbot.api import logger
+import httpx
 
 from astrbot.core import AstrBotConfig
 
@@ -33,9 +35,17 @@ class ConfigUtils:
 
     def get_server_list(self) -> list[dict]:
         return self.server_list
+    
+    async def get_online_servers_name(self) -> list[str]:
+        """获取在线的服务器名称列表"""
+        configured_servers: list[str] = [
+            str(server["name"]) for server in self.server_list if server.get("name")
+        ]
+        cca_servers = await get_cca_servers(self.cca_client_url)
+        return list(dict.fromkeys(configured_servers + cca_servers))
 
     def get_cca_client_url(self) -> str:
-        return str(self.cca_client_url).strip()
+        return self.cca_client_url.strip()
 
     def _parse_server_list(self, servers_config) -> list[dict]:
         raw_servers = self._load_servers_config(servers_config)
@@ -108,3 +118,33 @@ class ConfigUtils:
         file_url = f"file:///{url_path}"
 
         return file_url
+
+async def get_cca_servers(cca_url: str) -> list[str]:
+    """获取 CCA 上的所有服务器名称。"""
+    if not cca_url or not isinstance(cca_url, str):
+        return []
+    # 从 CCA URL 中解析出 API 地址和 Token
+    try:
+        url = f"{cca_url.split(',')[0]}/api/servers"
+        token = cca_url.split(',')[1].strip()
+    except IndexError:
+        logger.error("CCA 配置格式不对")
+        return []
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
+            response = await client.get(url, headers=headers)
+            response.raise_for_status()
+            payload = response.json()
+            if payload.get("code") != 200:
+                logger.error(f"获取 CCA 服务器列表失败: code={payload.get('code')}, msg={payload.get('msg')}")
+                return []
+            data = payload.get("data") or []
+            return data
+    except Exception as e:
+        logger.error(f"获取 CCA 服务器列表失败: error={e}")
+        return []

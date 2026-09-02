@@ -5,7 +5,7 @@
 ## 插件信息
 - 插件名称：`astrbot_plugin_mc_admin`
 - 作者：`Xc_Star`
-- 当前版本：`2.0.0`
+- 当前版本：`2.1.0`
 - 仓库地址：[https://github.com/Xc-Star/astrbot_plugin_mc_admin](https://github.com/Xc-Star/astrbot_plugin_mc_admin)
 
 ## 依赖与启动提醒
@@ -31,7 +31,6 @@
 ### 通用命令
 ```text
 /mc ｜ 查看帮助
-/mc status ｜ 查看服务器状态
 /mc wl add/remove <ID> ｜ 给玩家添加/移除白名单(管理员)
 /mc command <服务器名字> <command> ｜ 向指定服务器发送MC命令(管理员)
 /mcdr <服务器名> <命令> ｜ 向指定服务器发送MCDR命令(管理员)
@@ -97,4 +96,5 @@
 ## 注意事项
 - 导出材料列表功能必须 NapCat 和 Astrbot 在相同环境下，如 Astrbot 在本机 NapCat 在容器, NapCat 会读取不到本机 Astrbot 生成的xlsx文件
 - `servers` 配置错误会导致相关命令无法连通 RCON。
+- 当你的所有 MCDR 服务器都连接了CCA时，`servers` 配置可以不用管，如果有子服不属于 MCDR 服务器可以在 `servers` 额外添加。
 - 详细的配置介绍：`BV`
