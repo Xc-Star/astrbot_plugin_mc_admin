@@ -55,6 +55,11 @@ ITEMS_PER_BOX = 1728  # 每箱物品数量 (64 * 27)
 # 支持的图片格式
 SUPPORTED_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.bmp']
 
+# 材料图标图床地址
+MATERIAL_ICON_BASE_URL = "https://img.xcstar.top/file/mc_admin"
+# 材料图标后缀映射文件名（由 build_icon_map.py 生成，位于 data/ 目录下）
+MATERIAL_ICON_MAP_FILENAME = "material_icon_map.json"
+
 # 默认背景颜色
 DEFAULT_BACKGROUND_COLOR = "#43454A"
 
@@ -89,7 +94,10 @@ class ImageUtils:
         # 先保存配置工具供后续使用
         self.config_utils = config_utils
         self.enable_big_task_image = config_utils.enable_big_task_image
-        self.output = os.path.join(self.config_utils.get_plugin_path(), "data")
+        self.output = os.path.join(self.config_utils.get_plugin_path(), "output")
+        # 检查输出目录是否存在，不存在则创建
+        if not os.path.exists(self.output):
+            os.makedirs(self.output)
         # 模板目录定位到插件根目录下的 template
         self.template_dir = os.path.join(self.config_utils.get_plugin_path(), 'template')
         self.enable_background_image = self.config_utils.enable_background_image
@@ -100,6 +108,9 @@ class ImageUtils:
         
         # 记录最后使用的背景图片路径
         self._background_image = None
+
+        # 材料图标后缀映射表（由 build_icon_map.py 生成，启动时直接加载）
+        self._icon_suffix_map = self._load_material_icon_map()
     
     # ==================== 公共方法 ====================
     
@@ -346,40 +357,44 @@ class ImageUtils:
         })
     
     def _get_material_image_url(self, material_name_id: str) -> str:
-        """根据材料ID获取本地图片文件URL
-        
+        """根据材料 ID 获取图床图片 URL
+
         Args:
-            material_name_id: 材料ID，格式如 minecraft:white_stained_glass
-            
+            material_name_id: 材料 ID，格式如 minecraft:white_stained_glass
+
         Returns:
-            str: 图片文件的 file:// URL，如果找不到则返回空字符串
+            str: 图床图片 URL（如 https://img.xcstar.top/file/mc_admin/minecraft_stone.png），
+                 找不到则返回空字符串
         """
         if not material_name_id:
             return ''
-        
+
         # 将 minecraft:white_stained_glass 转换为 minecraft_white_stained_glass
         file_name_base = material_name_id.lower().strip().replace(':', '_')
-        
-        # item_icon 目录路径
-        item_icon_dir = os.path.join(self.output, "item_icon")
-        
-        # 支持的图片扩展名（按优先级排序）
-        supported_extensions = ['.png', '.gif', '.jpg', '.jpeg']
-        
-        # 尝试查找文件
-        for ext in supported_extensions:
-            file_path = os.path.join(item_icon_dir, f"{file_name_base}{ext}")
-            if os.path.exists(file_path):
-                # 转换为 file:// URL
-                try:
-                    return path_to_file_url(file_path)
-                except Exception as e:
-                    logger.warning(f"转换图片路径失败 {file_path}: {e}")
-                    return ''
-        
-        # 如果找不到文件，记录警告
-        logger.debug(f"未找到材料图标文件: {material_name_id} (查找路径: {file_name_base})")
-        return ''
+
+        # 从映射表中查该图标实际存在的后缀
+        ext = self._icon_suffix_map.get(file_name_base, '')
+        if not ext:
+            logger.debug(f"未在映射表中找到材料图标: {material_name_id} (基础名: {file_name_base})")
+            return ''
+
+        return f"{MATERIAL_ICON_BASE_URL}/{file_name_base}{ext}"
+
+    def _load_material_icon_map(self) -> dict:
+        """加载材料图标后缀映射表
+
+        Returns:
+            dict: 文件基础名 -> 后缀（如 {"minecraft_stone": ".png"}），读取失败时返回空字典
+        """
+        map_path = os.path.join(
+            self.config_utils.get_plugin_path(), "data", MATERIAL_ICON_MAP_FILENAME
+        )
+        try:
+            with open(map_path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except (OSError, json.JSONDecodeError) as e:
+            logger.warning(f"读取材料图标映射文件失败({map_path}): {e}，材料图标将不显示。")
+            return {}
     
     def _process_materia_list(self, materia_list: list) -> list:
         """处理材料列表数据"""

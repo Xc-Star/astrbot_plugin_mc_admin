@@ -36,7 +36,8 @@ async def send_command(config: ConfigUtils, server_name: str, command: str) -> s
     cca_url = config.get_cca_client_url()
 
     # 如果有 CCA
-    if cca_url is not None and cca_url != "" and isinstance(cca_url, str):
+    cca_servers = []
+    if cca_url and cca_url != "":
         if not cca_url.startswith(('http://', 'https://')):
             return f"CCA Client 配置的地址不对喵~"
         # 获取 CCA 的服务器列表
@@ -51,7 +52,7 @@ async def send_command(config: ConfigUtils, server_name: str, command: str) -> s
     configured_servers = config.get_server_list()
 
     # 如果是 CCA 的服务器，走 send_cca_command 方法
-    if cca_url and isinstance(cca_url, str) and server_name in cca_servers:
+    if cca_url and cca_url != "" and server_name in cca_servers:
         if not command.startswith("/"):
             command = "/" + command
         res = await send_cca_command(cca_url, server_name, command)

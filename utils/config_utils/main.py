@@ -45,7 +45,7 @@ class ConfigUtils:
         return list(dict.fromkeys(configured_servers + cca_servers))
 
     def get_cca_client_url(self) -> str:
-        return self.cca_client_url.strip()
+        return str(self.cca_client_url).strip()
 
     def _parse_server_list(self, servers_config) -> list[dict]:
         raw_servers = self._load_servers_config(servers_config)
