@@ -18,7 +18,7 @@ from cachetools import TTLCache
     "astrbot_plugin_mc_admin",
     "Xc_Star",
     "这是 Minecraft 服务器 的管理插件，支持群组服，RCON命令，list，珍珠炮落点计算，服务器工程坐标，备货清单，白名单管理等功能",
-    "2.2.0",
+    "2.3.0",
     "https://github.com/Xc-Star/astrbot_plugin_mc_admin",
 )
 class McAdminPlugin(Star):
@@ -90,9 +90,11 @@ class McAdminPlugin(Star):
 
     # @filter.command("test")
     async def test(self, event: AstrMessageEvent):
-        logger.info(self.config)
-        msg = f"keys：{str(list(self.task_temp.keys()))},values：{str(list(self.task_temp.values()))}"
-        yield event.plain_result(msg)
+        # logger.info(self.config)
+        # msg = f"keys：{str(list(self.task_temp.keys()))},values：{str(list(self.task_temp.values()))}"
+        # yield event.plain_result(msg)
+        # yield event.image_result("https://img.xcstar.top/file/mc_admin/minecraft_copper_nugget.png")
+        yield event.image_result("https://img.xcstar.top/file/resources/desktop/BDA12EDD-5682-497A-83BE-C8884AFFCE3E.webp")
 
     @filter.command("mc")
     @in_enabled_groups()
@@ -151,6 +153,17 @@ class McAdminPlugin(Star):
     async def get_background_image(self, event: AstrMessageEvent):
         logger.info(f"开始执行获取原图命令")
         yield event.image_result(self.command_utils.get_image())
+
+    @filter.command("原图u")
+    @in_enabled_groups()
+    @requires_enabled(
+        "enable_get_last_background_image",
+        "获取原图功能暂未启用",
+        allow_admin_bypass=True,
+    )
+    async def get_background_image_url(self, event: AstrMessageEvent):
+        logger.info(f"开始执行获取原图命令")
+        yield event.plain_result(self.command_utils.get_image())
 
     @filter.command("抽卡")
     @in_enabled_groups()

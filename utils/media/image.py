@@ -3,6 +3,7 @@ import os
 import json
 import random
 import math
+import httpx
 from urllib.request import pathname2url
 from jinja2 import FileSystemLoader, Environment
 from ..config_utils import ConfigUtils
@@ -55,8 +56,10 @@ ITEMS_PER_BOX = 1728  # 每箱物品数量 (64 * 27)
 # 支持的图片格式
 SUPPORTED_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.bmp']
 
-# 材料图标图床地址
-MATERIAL_ICON_BASE_URL = "https://img.xcstar.top/file/mc_admin"
+# 图床地址
+MATERIAL_ICON_BASE_URL = "https://img.xcstar.top"
+# 图床随机图路径
+RANDOM_IMAGE_PATH = "/resources/list"
 # 材料图标后缀映射文件名（由 build_icon_map.py 生成，位于 data/ 目录下）
 MATERIAL_ICON_MAP_FILENAME = "material_icon_map.json"
 
@@ -235,9 +238,12 @@ class ImageUtils:
             return f"background: {DEFAULT_BACKGROUND_COLOR};"
         
         try:
-            # 使用跨平台路径转换函数
-            file_url = path_to_file_url(background_image_path)
-            return f"background-image: url('{file_url}');"
+            if background_image_path.startswith("http"):
+                return f"background-image: url('{background_image_path}');"
+            else:
+                # 使用跨平台路径转换函数
+                file_url = path_to_file_url(background_image_path)
+                return f"background-image: url('{file_url}');"
         except Exception as e:
             logger.error(f"创建背景样式失败: {e}")
             return f"background: {DEFAULT_BACKGROUND_COLOR};"
@@ -252,6 +258,22 @@ class ImageUtils:
             if not self.enable_background_image:
                 logger.debug("已禁用背景图片，不获取随机背景图")
                 return ''
+
+            # 内置图库
+            if self.background_image_dir == "内置":
+                img_bed_response = httpx.get(f"{MATERIAL_ICON_BASE_URL}/random", params={"dir": RANDOM_IMAGE_PATH})
+                if img_bed_response.status_code == 200:
+                    img_bed_response_json = img_bed_response.json()
+                    if "url" in img_bed_response_json:
+                        self._background_image = f"{MATERIAL_ICON_BASE_URL}{img_bed_response_json['url']}"
+                        return f"{MATERIAL_ICON_BASE_URL}{img_bed_response_json['url']}"
+                    else:
+                        logger.warning("未能从内置图库获取图片，使用默认背景")
+                        return ''
+                else:
+                    logger.warning("未能从内置图库获取图片，使用默认背景")
+                    return ''
+
             
             if not os.path.exists(self.background_image_dir):
                 logger.warning(f"背景图片目录不存在: {self.background_image_dir}")
@@ -261,7 +283,7 @@ class ImageUtils:
             image_files = self._get_image_files(self.background_image_dir)
             
             if not image_files:
-                logger.debug(f"背景图片目录中没有找到图片文件: {self.background_image_dir}")
+                logger.warning(f"背景图片目录中没有找到图片文件: {self.background_image_dir}")
                 return ''
             
             # 随机选择并保存路径
@@ -378,7 +400,7 @@ class ImageUtils:
             logger.debug(f"未在映射表中找到材料图标: {material_name_id} (基础名: {file_name_base})")
             return ''
 
-        return f"{MATERIAL_ICON_BASE_URL}/{file_name_base}{ext}"
+        return f"{MATERIAL_ICON_BASE_URL}/file/mc_admin/{file_name_base}{ext}"
 
     def _load_material_icon_map(self) -> dict:
         """加载材料图标后缀映射表

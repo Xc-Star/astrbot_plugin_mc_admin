@@ -42,10 +42,10 @@
         "default": false
     },
     "background_image_path": {
-        "description": "背景图文件夹路径",
+        "description": "背景图配置",
         "type": "string",
-        "hint": "会从这个文件夹里面随机选择一张图片作为背景图，默认路径为'~/astrbot_plugin_mc_admin/data/background_image'",
-        "default": ""
+        "hint": "会从这个文件夹里面随机选择一张图片作为背景图，如'C:/图片'。使用“内置”可以使用内置图库",
+        "default": "内置"
     },
     "enable_get_last_background_image": {
         "description": "开启获取原图",

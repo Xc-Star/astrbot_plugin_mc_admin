@@ -5,7 +5,7 @@
 ## 插件信息
 - 插件名称：`astrbot_plugin_mc_admin`
 - 作者：`Xc_Star`
-- 当前版本：`2.2.0`
+- 当前版本：`2.3.0`
 - 仓库地址：[https://github.com/Xc-Star/astrbot_plugin_mc_admin](https://github.com/Xc-Star/astrbot_plugin_mc_admin)
 
 ## 依赖与启动提醒
@@ -24,6 +24,7 @@
 - 珍珠炮落点计算
 - 服务器坐标点管理
 - 背景图抽卡与原图回看
+- 内置图库
 - 按群启用（仅配置群可触发）
 
 ## 命令说明
@@ -43,6 +44,7 @@
 /zz <x> <z> ｜ 珍珠炮落点计算
 /wiki <问题> | 通过大模型查wiki
 /原图 ｜ 获取上一次list的背景图
+/原图u  |  获取上一张图片的路径，以便用于排查
 /抽卡 ｜ 随机获取一张list图库的图
 ```
 
