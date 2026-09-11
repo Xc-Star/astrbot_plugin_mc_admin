@@ -1,6 +1,6 @@
 from __future__ import annotations
-from enum import Enum, auto
-from typing import List
+
+from enum import Enum
 
 
 class Direction(Enum):
@@ -30,7 +30,7 @@ class Direction(Enum):
             return Direction.North
 
     @staticmethod
-    def from_angle_with_fallbacks(angle: float) -> List[Direction]:
+    def from_angle_with_fallbacks(angle: float) -> list[Direction]:
         BOUNDARY_EPSILON = 10.0
 
         def is_near(boundary: float) -> bool:

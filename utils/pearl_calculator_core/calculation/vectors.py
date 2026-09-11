@@ -1,12 +1,11 @@
-from typing import Tuple, Optional
-from ..physics.world.space import Space3D
 from ..physics.world.direction import Direction
 from ..physics.world.layout_direction import LayoutDirection
+from ..physics.world.space import Space3D
 from .inputs import Cannon
 from .simulation import calculate_tnt_motion
 
 
-def resolve_vectors_for_direction(cannon: Cannon, direction: Direction) -> Tuple[Space3D, Space3D, Space3D]:
+def resolve_vectors_for_direction(cannon: Cannon, direction: Direction) -> tuple[Space3D, Space3D, Space3D]:
     pearl_calc_pos = cannon.pearl.offset.copy()
     pearl_calc_pos.y = cannon.pearl.position.y
 

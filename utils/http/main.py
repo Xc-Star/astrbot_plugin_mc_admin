@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import os
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 
 import httpx
+from wireup import injectable
 
 
+@injectable
 class AsyncHttpClient:
     def __init__(
         self,
@@ -44,7 +47,9 @@ class AsyncHttpClient:
 
 class HttpUtils:
     @staticmethod
-    def request(method: str, url: str, timeout: float = 30.0, **kwargs) -> httpx.Response:
+    def request(
+        method: str, url: str, timeout: float = 30.0, **kwargs
+    ) -> httpx.Response:
         response = httpx.request(
             method,
             url,
@@ -65,7 +70,9 @@ class HttpUtils:
         return response.json()
 
     @staticmethod
-    def download_file(url: str, file_path: str, timeout: float = 30.0, **kwargs) -> None:
+    def download_file(
+        url: str, file_path: str, timeout: float = 30.0, **kwargs
+    ) -> None:
         response = HttpUtils.get(url, timeout=timeout, **kwargs)
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
         with open(file_path, "wb") as f:

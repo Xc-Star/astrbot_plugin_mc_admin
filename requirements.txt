@@ -8,3 +8,4 @@ httpx
 jinja2
 chardet
 openpyxl
+wireup==2.12.0

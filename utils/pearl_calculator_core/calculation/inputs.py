@@ -1,8 +1,9 @@
 from __future__ import annotations
+
 from dataclasses import dataclass
-from typing import List, Optional
-from ..physics.world.space import Space3D
+
 from ..physics.world.layout_direction import LayoutDirection
+from ..physics.world.space import Space3D
 from ..settings.types import CannonMode
 
 
@@ -16,7 +17,7 @@ class TNT:
 class GeneralData:
     pearl_position: Space3D
     pearl_motion: Space3D
-    tnt_charges: List[TNT]
+    tnt_charges: list[TNT]
 
 
 @dataclass
@@ -29,16 +30,16 @@ class Pearl:
 @dataclass
 class Cannon:
     pearl: Pearl
-    red_tnt_override: Optional[Space3D] = None
-    blue_tnt_override: Optional[Space3D] = None
-    vertical_tnt: Optional[Space3D] = None
+    red_tnt_override: Space3D | None = None
+    blue_tnt_override: Space3D | None = None
+    vertical_tnt: Space3D | None = None
     mode: CannonMode = CannonMode.Standard
     north_west_tnt: Space3D = None
     north_east_tnt: Space3D = None
     south_west_tnt: Space3D = None
     south_east_tnt: Space3D = None
-    default_red_duper: Optional[LayoutDirection] = None
-    default_blue_duper: Optional[LayoutDirection] = None
+    default_red_duper: LayoutDirection | None = None
+    default_blue_duper: LayoutDirection | None = None
 
     def __post_init__(self):
         if self.north_west_tnt is None:

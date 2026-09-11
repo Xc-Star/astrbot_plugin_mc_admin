@@ -1,15 +1,18 @@
-from pathlib import Path
-import os
 import json
-import random
 import math
-import httpx
+import os
+import random
+from pathlib import Path
 from urllib.request import pathname2url
-from jinja2 import FileSystemLoader, Environment
-from ..config_utils import ConfigUtils
-from .browser import BrowserManager
+
+import httpx
+from jinja2 import Environment, FileSystemLoader
+from wireup import injectable
+
 from astrbot.api import logger
 
+from ..config_utils import ConfigUtils
+from .browser import BrowserManager
 
 # ==================== 常量定义 ====================
 
@@ -54,10 +57,12 @@ ITEMS_PER_STACK = 64  # 每组物品数量
 ITEMS_PER_BOX = 1728  # 每箱物品数量 (64 * 27)
 
 # 支持的图片格式
-SUPPORTED_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.bmp']
+SUPPORTED_IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".gif", ".bmp"]
 
 # 图床地址
 MATERIAL_ICON_BASE_URL = "https://img.xcstar.top"
+# S3端点
+MATERIAL_S3_BASE_URL = "https://s3.xcstar.online:448"
 # 图床随机图路径
 RANDOM_IMAGE_PATH = "/resources/list"
 # 材料图标后缀映射文件名（由 build_icon_map.py 生成，位于 data/ 目录下）
@@ -69,9 +74,10 @@ DEFAULT_BACKGROUND_COLOR = "#43454A"
 
 # ==================== 工具函数 ====================
 
+
 def path_to_file_url(file_path: str) -> str:
     """将文件路径转换为 file:// URL（跨平台支持）
-        
+
     支持平台：
         - Windows: C:\\path\\to\\file -> file:///C:/path/to/file
         - Linux/Mac: /path/to/file -> file:///path/to/file
@@ -90,9 +96,11 @@ def path_to_file_url(file_path: str) -> str:
 
 # ==================== 类定义 ====================
 
+
+@injectable
 class ImageUtils:
     """图片生成工具类，负责生成服务器列表和材料列表图片"""
-    
+
     def __init__(self, config_utils: ConfigUtils):
         # 先保存配置工具供后续使用
         self.config_utils = config_utils
@@ -102,63 +110,75 @@ class ImageUtils:
         if not os.path.exists(self.output):
             os.makedirs(self.output)
         # 模板目录定位到插件根目录下的 template
-        self.template_dir = os.path.join(self.config_utils.get_plugin_path(), 'template')
+        self.template_dir = os.path.join(
+            self.config_utils.get_plugin_path(), "template"
+        )
         self.enable_background_image = self.config_utils.enable_background_image
         self.background_image_dir = self.config_utils.background_image_path
-        
+
         # 使用 BrowserManager 管理 browser 实例
         self.browser_manager = BrowserManager()
-        
+
         # 记录最后使用的背景图片路径
         self._background_image = None
 
         # 材料图标后缀映射表（由 build_icon_map.py 生成，启动时直接加载）
         self._icon_suffix_map = self._load_material_icon_map()
-    
+
     # ==================== 公共方法 ====================
-    
+
     def get_last_image(self) -> str:
         """获取最后一次使用的背景图片路径"""
         return str(self._background_image)
-    
+
     async def close_browser(self):
         """关闭 browser 实例"""
         await self.browser_manager.close()
-    
+
     async def generate_list_image(self, servers_data=None):
         """生成在线玩家列表图片
 
         Returns:
             str: 生成的图片文件路径
         """
-        output_path = Path(os.path.join(self.template_dir, 'img.png'))
+        output_path = Path(os.path.join(self.template_dir, "img.png"))
         output_path.parent.mkdir(exist_ok=True)
 
         # 渲染 HTML 模板
         html_content = self.render_list_template(servers_data)
-        
+
         # 计算截图高度
         height = self._calculate_list_screenshot_height(servers_data)
-        
+
         # 截图
-        path = await self._take_screenshot(html_content, height, 'list.png')
-        
+        path = await self._take_screenshot(html_content, height, "list.png")
+
         return path
 
-    async def generate_whitelist_image(self, whitelist_players: list[str], filename: str = 'whitelist.png') -> str:
+    async def generate_whitelist_image(
+        self, whitelist_players: list[str], filename: str = "whitelist.png"
+    ) -> str:
         """生成白名单图片（栅格布局）"""
         players = whitelist_players or []
         html_content = self.render_whitelist_template(players)
         height = self._calculate_whitelist_screenshot_height(players)
         return await self._take_screenshot(html_content, height, filename)
 
-    async def generate_help_image(self, help_data: dict, filename: str = 'help.png') -> str:
+    async def generate_help_image(
+        self, help_data: dict, filename: str = "help.png"
+    ) -> str:
         """生成帮助信息图片"""
         html_content = self.render_help_template(help_data)
         height = self._calculate_help_screenshot_height(help_data)
         return await self._take_screenshot(html_content, height, filename)
-    
-    async def generate_materia_image(self, task_data: dict, materia_list: list, filename: str = 'task.png', use_big_image: bool = True) -> str:
+
+    async def generate_materia_image(
+        self,
+        task_data: dict,
+        materia_list: list,
+        filename: str = "task.png",
+        use_big_image: bool = True,
+    ) -> str:
         """生成材料列表图片
 
         Args:
@@ -172,71 +192,79 @@ class ImageUtils:
         """
         # 准备数据
         task_data_with_materia = task_data.copy()
-        task_data_with_materia['materia_list'] = self._process_materia_list(materia_list)
-        task_data_with_materia['use_big_image'] = use_big_image
+        task_data_with_materia["materia_list"] = self._process_materia_list(
+            materia_list
+        )
+        task_data_with_materia["use_big_image"] = use_big_image
 
         # 计算截图高度
-        height = self._calculate_materia_screenshot_height(task_data_with_materia['materia_list'], use_big_image)
-        
+        height = self._calculate_materia_screenshot_height(
+            task_data_with_materia["materia_list"], use_big_image
+        )
+
         # 计算截图宽度（根据材料数量和模式）
-        material_count = len(task_data_with_materia['materia_list'])
+        material_count = len(task_data_with_materia["materia_list"])
         width = self._calculate_materia_screenshot_width(material_count, use_big_image)
 
         # 渲染 HTML 模板
         html_content = self.render_materia_template(task_data_with_materia)
 
         # 截图（大图模式使用 full_page=True，传统模式使用 full_page=False）
-        path = await self._take_screenshot(html_content, height, filename, width, full_page=use_big_image)
+        path = await self._take_screenshot(
+            html_content, height, filename, width, full_page=use_big_image
+        )
 
         return path
 
-    async def generate_zz_image(self, zz_data: dict, filename: str = 'zz.png') -> str:
+    async def generate_zz_image(self, zz_data: dict, filename: str = "zz.png") -> str:
         """生成珍珠炮计算结果图片"""
         processed_data = self._process_zz_data(zz_data)
         height = self._calculate_zz_screenshot_height(processed_data)
         html_content = self.render_zz_template(processed_data)
         return await self._take_screenshot(html_content, height, filename)
-    
+
     # ==================== 模板渲染方法 ====================
-    
+
     def render_list_template(self, servers_data=None):
         """渲染玩家列表 HTML 模板"""
         templates_dir = os.path.join(self.config_utils.get_plugin_path(), "template")
         env = Environment(loader=FileSystemLoader(templates_dir))
         template = env.get_template("list.html")
-        
+
         # 准备背景样式
         background_image_style = self._get_background_image_style()
         # 获取字体
         font = self.config_utils.get_font()
         # 准备服务器数据（直接传递字典，不需要转 JSON）
         servers_data = servers_data or {}
-        
-        html_content = template.render({
-            "servers_data": servers_data,
-            "background_image_style": background_image_style,
-            "font": font
-        })
-        
+
+        html_content = template.render(
+            {
+                "servers_data": servers_data,
+                "background_image_style": background_image_style,
+                "font": font,
+            }
+        )
+
         return html_content
-    
+
     def _get_background_image_style(self) -> str:
         """获取背景图片样式（跨平台支持）
-        
+
         Returns:
             str: CSS 背景样式字符串
         """
         # 未启用背景图片时使用默认背景
         if not self.enable_background_image:
             return f"background: {DEFAULT_BACKGROUND_COLOR};"
-        
+
         background_image_path = self.get_random_background_image()
-        
+
         # 未找到图片时使用默认背景
         if not background_image_path:
             logger.debug("未找到可用的背景图片，使用默认背景")
             return f"background: {DEFAULT_BACKGROUND_COLOR};"
-        
+
         try:
             if background_image_path.startswith("http"):
                 return f"background-image: url('{background_image_path}');"
@@ -247,57 +275,62 @@ class ImageUtils:
         except Exception as e:
             logger.error(f"创建背景样式失败: {e}")
             return f"background: {DEFAULT_BACKGROUND_COLOR};"
-    
+
     def get_random_background_image(self) -> str:
         """从背景图片目录中随机选择一张图片
-        
+
         Returns:
             str: 图片文件路径，未找到返回空字符串
         """
         try:
             if not self.enable_background_image:
                 logger.debug("已禁用背景图片，不获取随机背景图")
-                return ''
+                return ""
 
             # 内置图库
             if self.background_image_dir == "内置":
-                img_bed_response = httpx.get(f"{MATERIAL_ICON_BASE_URL}/random", params={"dir": RANDOM_IMAGE_PATH})
+                img_bed_response = httpx.get(
+                    f"{MATERIAL_ICON_BASE_URL}/random",
+                    params={"dir": RANDOM_IMAGE_PATH},
+                )
                 if img_bed_response.status_code == 200:
                     img_bed_response_json = img_bed_response.json()
                     if "url" in img_bed_response_json:
-                        self._background_image = f"{MATERIAL_ICON_BASE_URL}{img_bed_response_json['url']}"
-                        return f"{MATERIAL_ICON_BASE_URL}{img_bed_response_json['url']}"
+                        img_url: str = img_bed_response_json.get("url")
+                        self._background_image = f"{MATERIAL_ICON_BASE_URL}{img_url}"
+                        return f"{MATERIAL_S3_BASE_URL}/image-bed{img_url.removeprefix('/file')}"
                     else:
                         logger.warning("未能从内置图库获取图片，使用默认背景")
-                        return ''
+                        return ""
                 else:
                     logger.warning("未能从内置图库获取图片，使用默认背景")
-                    return ''
+                    return ""
 
-            
             if not os.path.exists(self.background_image_dir):
                 logger.warning(f"背景图片目录不存在: {self.background_image_dir}")
-                return ''
-            
+                return ""
+
             # 获取所有图片文件
             image_files = self._get_image_files(self.background_image_dir)
-            
+
             if not image_files:
-                logger.warning(f"背景图片目录中没有找到图片文件: {self.background_image_dir}")
-                return ''
-            
+                logger.warning(
+                    f"背景图片目录中没有找到图片文件: {self.background_image_dir}"
+                )
+                return ""
+
             # 随机选择并保存路径
             random_image = random.choice(image_files)
             logger.debug(f"选择的背景图片: {random_image}")
-            
+
             image_path = os.path.join(self.background_image_dir, random_image)
             self._background_image = image_path
             return image_path
-            
+
         except Exception as e:
             logger.error(f"获取随机背景图片失败: {str(e)}")
-            return ''
-    
+            return ""
+
     def _get_image_files(self, directory: str) -> list:
         """获取目录中的所有图片文件"""
         image_files = []
@@ -306,25 +339,27 @@ class ImageUtils:
             if file_ext in SUPPORTED_IMAGE_EXTENSIONS:
                 image_files.append(file)
         return image_files
-    
+
     # ==================== MateriaList 模板渲染方法 ====================
-    
+
     def render_materia_template(self, task_data: dict) -> str:
         """渲染材料列表 HTML 模板"""
         templates_dir = os.path.join(self.config_utils.get_plugin_path(), "template")
         env = Environment(loader=FileSystemLoader(templates_dir))
         template = env.get_template("MateriaList.html")
-        
+
         # 使用统一的背景样式获取方法
         background_image_style = self._get_background_image_style()
         font = self.config_utils.get_font()
-        
-        html_content = template.render({
-            "data": task_data,
-            "background_image_style": background_image_style,
-            "font": font
-        })
-        
+
+        html_content = template.render(
+            {
+                "data": task_data,
+                "background_image_style": background_image_style,
+                "font": font,
+            }
+        )
+
         return html_content
 
     def render_zz_template(self, zz_data: dict) -> str:
@@ -336,11 +371,13 @@ class ImageUtils:
         background_image_style = self._get_background_image_style()
         font = self.config_utils.get_font()
 
-        return template.render({
-            "data": zz_data,
-            "background_image_style": background_image_style,
-            "font": font
-        })
+        return template.render(
+            {
+                "data": zz_data,
+                "background_image_style": background_image_style,
+                "font": font,
+            }
+        )
 
     def render_whitelist_template(self, whitelist_players: list[str]) -> str:
         """渲染白名单 HTML 模板"""
@@ -351,12 +388,14 @@ class ImageUtils:
         background_image_style = self._get_background_image_style()
         font = self.config_utils.get_font()
 
-        return template.render({
-            "players": whitelist_players,
-            "total_count": len(whitelist_players),
-            "background_image_style": background_image_style,
-            "font": font
-        })
+        return template.render(
+            {
+                "players": whitelist_players,
+                "total_count": len(whitelist_players),
+                "background_image_style": background_image_style,
+                "font": font,
+            }
+        )
 
     def render_help_template(self, help_data: dict) -> str:
         """渲染帮助 HTML 模板"""
@@ -368,16 +407,22 @@ class ImageUtils:
         font = self.config_utils.get_font()
 
         items = help_data.get("items", []) if help_data else []
-        title = help_data.get("title", "Minecraft 插件帮助") if help_data else "Minecraft 插件帮助"
+        title = (
+            help_data.get("title", "Minecraft 插件帮助")
+            if help_data
+            else "Minecraft 插件帮助"
+        )
 
-        return template.render({
-            "title": title,
-            "items": items,
-            "total_count": len(items),
-            "background_image_style": background_image_style,
-            "font": font
-        })
-    
+        return template.render(
+            {
+                "title": title,
+                "items": items,
+                "total_count": len(items),
+                "background_image_style": background_image_style,
+                "font": font,
+            }
+        )
+
     def _get_material_image_url(self, material_name_id: str) -> str:
         """根据材料 ID 获取图床图片 URL
 
@@ -389,16 +434,18 @@ class ImageUtils:
                  找不到则返回空字符串
         """
         if not material_name_id:
-            return ''
+            return ""
 
         # 将 minecraft:white_stained_glass 转换为 minecraft_white_stained_glass
-        file_name_base = material_name_id.lower().strip().replace(':', '_')
+        file_name_base = material_name_id.lower().strip().replace(":", "_")
 
         # 从映射表中查该图标实际存在的后缀
-        ext = self._icon_suffix_map.get(file_name_base, '')
+        ext = self._icon_suffix_map.get(file_name_base, "")
         if not ext:
-            logger.debug(f"未在映射表中找到材料图标: {material_name_id} (基础名: {file_name_base})")
-            return ''
+            logger.debug(
+                f"未在映射表中找到材料图标: {material_name_id} (基础名: {file_name_base})"
+            )
+            return ""
 
         return f"{MATERIAL_ICON_BASE_URL}/file/mc_admin/{file_name_base}{ext}"
 
@@ -412,52 +459,67 @@ class ImageUtils:
             self.config_utils.get_plugin_path(), "data", MATERIAL_ICON_MAP_FILENAME
         )
         try:
-            with open(map_path, "r", encoding="utf-8") as f:
+            with open(map_path, encoding="utf-8") as f:
                 return json.load(f)
         except (OSError, json.JSONDecodeError) as e:
-            logger.warning(f"读取材料图标映射文件失败({map_path}): {e}，材料图标将不显示。")
+            logger.warning(
+                f"读取材料图标映射文件失败({map_path}): {e}，材料图标将不显示。"
+            )
             return {}
-    
+
     def _process_materia_list(self, materia_list: list) -> list:
         """处理材料列表数据"""
+
         def calculate_remaining_box(total, commit_count):
             """计算剩余盒数"""
             return max(0, math.floor((total - commit_count) / ITEMS_PER_BOX))
-        
+
         def calculate_remaining_group(total, commit_count):
             """计算剩余组数（去除盒数后）"""
             remaining_items = max(0, (total - commit_count)) % ITEMS_PER_BOX
             return round(remaining_items / ITEMS_PER_STACK, 2)
-        
+
         res = []
         for materia in materia_list:
             total = int(materia[3])
             commit_count = int(materia[5])
             material_name = materia[1]
             material_name_id = materia[2]
-            
-            res.append({
-                "number": materia[6],  # 编号
-                "name": material_name,  # 材料名字
-                "image_url": self._get_material_image_url(material_name_id),  # 材料图片URL
-                "total": total,  # 所需总数
-                "remaining_box": calculate_remaining_box(total, commit_count),  # 还差 - 盒
-                "remaining_group": calculate_remaining_group(total, commit_count),  # 还差 - 组
-                "recipient": materia[4],  # 负责人
-                "location": materia[8] if materia[8] is not None else '',  # 所在位置
-            })
+
+            res.append(
+                {
+                    "number": materia[6],  # 编号
+                    "name": material_name,  # 材料名字
+                    "image_url": self._get_material_image_url(
+                        material_name_id
+                    ),  # 材料图片URL
+                    "total": total,  # 所需总数
+                    "remaining_box": calculate_remaining_box(
+                        total, commit_count
+                    ),  # 还差 - 盒
+                    "remaining_group": calculate_remaining_group(
+                        total, commit_count
+                    ),  # 还差 - 组
+                    "recipient": materia[4],  # 负责人
+                    "location": materia[8]
+                    if materia[8] is not None
+                    else "",  # 所在位置
+                }
+            )
         return res
 
     def _process_zz_data(self, zz_data: dict) -> dict:
         """处理珍珠炮结果数据"""
         path_data = []
         for point in zz_data.get("pearlPath", []):
-            path_data.append({
-                "tick": point.get("tick", 0),
-                "x": f'{point.get("x", 0):.2f}',
-                "y": f'{point.get("y", 0):.2f}',
-                "z": f'{point.get("z", 0):.2f}',
-            })
+            path_data.append(
+                {
+                    "tick": point.get("tick", 0),
+                    "x": f"{point.get('x', 0):.2f}",
+                    "y": f"{point.get('y', 0):.2f}",
+                    "z": f"{point.get('z', 0):.2f}",
+                }
+            )
 
         bit_items = []
         if zz_data.get("redTNTBit"):
@@ -484,85 +546,91 @@ class ImageUtils:
         }
 
     # ==================== 高度计算方法 ====================
-    
+
     def _calculate_list_screenshot_height(self, servers_data=None) -> int:
         """计算列表截图高度"""
         if not servers_data:
             return max(LIST_MIN_HEIGHT, LIST_BASE_HEIGHT)
-        
+
         # 计算内容高度：每个服务器所需基础空间
         server_count = len(servers_data.items())
         content_height = server_count * LIST_SERVER_HEIGHT
-        
+
         # 统计总玩家数
         total_players = self._count_total_players(servers_data)
-        
+
         # 根据总玩家数增加额外高度
         content_height += (total_players // 5) * LIST_PLAYER_INCREMENT
-        
+
         # 确保最小高度
         return max(LIST_MIN_HEIGHT, LIST_BASE_HEIGHT + content_height)
-    
+
     def _count_total_players(self, servers_data: dict) -> int:
         """统计所有服务器的玩家总数"""
         total = 0
         for _, data in servers_data.items():
-            total += len(data.get('real_players', []))
-            total += len(data.get('bot_players', []))
+            total += len(data.get("real_players", []))
+            total += len(data.get("bot_players", []))
         return total
-    
-    def _calculate_materia_screenshot_height(self, materia_list: list, use_big_image: bool = True) -> int:
+
+    def _calculate_materia_screenshot_height(
+        self, materia_list: list, use_big_image: bool = True
+    ) -> int:
         """计算材料列表截图高度
-        
+
         Args:
             materia_list: 材料列表
             use_big_image: 是否使用大图模式
-            
+
         注意：当材料很多且分成多列时，每列的材料数量会减少，
         所以高度应该基于单列最多的材料数量来计算
         """
         # 根据模式决定每列材料数量
         items_per_column = 100 if use_big_image else 200
         material_count = len(materia_list)
-        
+
         # 计算每列最多的材料数量
         items_in_tallest_column = min(material_count, items_per_column)
-        
+
         # 只统计单列材料的高度
         single_location_count = 0
         multi_location_height = 0
-        
+
         # 只遍历第一列的材料来计算高度
         for materia in materia_list[:items_in_tallest_column]:
             location = materia.get("location", "")
             if not location:
                 single_location_count += 1
                 continue
-                
+
             try:
                 location_json = json.loads(location)
                 if len(location_json) == 1:
                     single_location_count += 1
                 else:
                     # 计算多位置额外高度
-                    multi_location_height += (len(location_json) + 1) * MATERIAL_LOCATION_LINE_HEIGHT
+                    multi_location_height += (
+                        len(location_json) + 1
+                    ) * MATERIAL_LOCATION_LINE_HEIGHT
             except (json.JSONDecodeError, TypeError):
                 single_location_count += 1
-        
+
         base_height = MATERIAL_BASE_HEIGHT
         content_height = single_location_count * MATERIAL_ROW_HEIGHT
-        
+
         # 加1是防止整数除法丢掉小数点导致截图不全
         total_height = base_height + content_height + multi_location_height + 1
         return max(MATERIAL_MIN_HEIGHT, int(total_height))
-    
-    def _calculate_materia_screenshot_width(self, material_count: int, use_big_image: bool = True) -> int:
+
+    def _calculate_materia_screenshot_width(
+        self, material_count: int, use_big_image: bool = True
+    ) -> int:
         """根据材料数量计算截图宽度
-        
+
         Args:
             material_count: 材料总数
             use_big_image: 是否使用大图模式
-            
+
         Returns:
             int: 计算出的宽度
         """
@@ -570,9 +638,9 @@ class ImageUtils:
             # 大图模式：每100个材料一列，每列宽度约1200px
             items_per_column = 100
             column_width = 1200
-            
+
             num_columns = (material_count + items_per_column - 1) // items_per_column
-            
+
             # 单列时使用默认宽度，多列时增加宽度
             if num_columns <= 1:
                 return SCREENSHOT_WIDTH
@@ -589,7 +657,9 @@ class ImageUtils:
         content_height = ZZ_BASE_HEIGHT + (path_length * ZZ_PATH_ROW_HEIGHT)
         return max(ZZ_MIN_HEIGHT, content_height)
 
-    def _calculate_whitelist_screenshot_height(self, whitelist_players: list[str]) -> int:
+    def _calculate_whitelist_screenshot_height(
+        self, whitelist_players: list[str]
+    ) -> int:
         """计算白名单截图高度"""
         if not whitelist_players:
             return WHITELIST_MIN_HEIGHT
@@ -599,14 +669,13 @@ class ImageUtils:
         row_count = math.ceil(len(whitelist_players) / WHITELIST_COLUMNS)
 
         for i in range(0, len(whitelist_players), WHITELIST_COLUMNS):
-            row_players = whitelist_players[i:i + WHITELIST_COLUMNS]
+            row_players = whitelist_players[i : i + WHITELIST_COLUMNS]
             max_lines = max(self._estimate_name_lines(name) for name in row_players)
             text_height = math.ceil(
                 WHITELIST_NAME_FONT_SIZE * WHITELIST_NAME_LINE_HEIGHT * max_lines
             )
             row_height = max(
-                WHITELIST_CARD_MIN_HEIGHT,
-                text_height + WHITELIST_CARD_VERTICAL_PADDING
+                WHITELIST_CARD_MIN_HEIGHT, text_height + WHITELIST_CARD_VERTICAL_PADDING
             )
             rows_height += row_height
 
@@ -640,41 +709,50 @@ class ImageUtils:
                 self._estimate_name_lines(command, chars_per_line=44),
                 self._estimate_name_lines(desc, chars_per_line=34),
             )
-            content_height += HELP_ROW_BASE_HEIGHT + max(0, line_count - 1) * HELP_ROW_EXTRA_LINE_HEIGHT
+            content_height += (
+                HELP_ROW_BASE_HEIGHT
+                + max(0, line_count - 1) * HELP_ROW_EXTRA_LINE_HEIGHT
+            )
 
         return max(HELP_MIN_HEIGHT, content_height)
-    
+
     # ==================== 截图方法 ====================
-    
-    async def _take_screenshot(self, html_content: str, height: int, filename: str, width: int = SCREENSHOT_WIDTH, full_page: bool = False) -> str:
+
+    async def _take_screenshot(
+        self,
+        html_content: str,
+        height: int,
+        filename: str,
+        width: int = SCREENSHOT_WIDTH,
+        full_page: bool = False,
+    ) -> str:
         """使用 playwright 截图（统一截图方法）"""
         path = os.path.join(self.output, filename)
         # 创建临时 HTML 文件以支持本地资源加载
-        temp_html_path = os.path.join(self.output, f'temp_{filename}.html')
+        temp_html_path = os.path.join(self.output, f"temp_{filename}.html")
 
         await self.browser_manager.ensure_browser()
         # 设置 viewport
         viewport_height = 2000 if full_page else height
-        page = await self.browser_manager.browser.new_page(viewport={
-            'width': width,
-            'height': viewport_height
-        })
-        
+        page = await self.browser_manager.browser.new_page(
+            viewport={"width": width, "height": viewport_height}
+        )
+
         # 根据图片大小动态计算超时时间（宽度越大，超时时间越长）
         # 基础超时30秒，每增加1200px宽度增加30秒
         timeout = 30000 + (width // 1200) * 30000
         # 设置页面超时
         page.set_default_timeout(timeout)
-        
+
         try:
             # 将 HTML 写入临时文件
-            with open(temp_html_path, 'w', encoding='utf-8') as f:
+            with open(temp_html_path, "w", encoding="utf-8") as f:
                 f.write(html_content)
-            
+
             # 使用跨平台路径转换函数构建 file:// URL
             file_url = path_to_file_url(temp_html_path)
-            
-            await page.goto(file_url, wait_until='load', timeout=timeout)
+
+            await page.goto(file_url, wait_until="load", timeout=timeout)
             # 根据参数决定是否使用全页截图
             await page.screenshot(path=path, full_page=full_page, timeout=timeout)
         finally:
@@ -684,6 +762,6 @@ class ImageUtils:
                 if os.path.exists(temp_html_path):
                     os.remove(temp_html_path)
             except Exception as e:
-                logger.warning(f'删除临时文件失败: {e}')
-        
+                logger.warning(f"删除临时文件失败: {e}")
+
         return path

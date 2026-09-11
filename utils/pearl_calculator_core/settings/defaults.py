@@ -1,5 +1,5 @@
 from ..physics.world.space import Space3D
-from .types import AppSettings, CannonSettings, CannonMode, Surface2D, PearlInfo
+from .types import AppSettings, CannonMode, CannonSettings, PearlInfo, Surface2D
 
 
 def default_app_settings() -> AppSettings:

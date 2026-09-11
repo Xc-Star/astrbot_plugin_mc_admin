@@ -11,15 +11,20 @@ Run with: python examples/usage.py
 """
 
 import json
-import time
-import sys
 import os
+import sys
+from typing import Any
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from pearl_calculator_core import (
-    Space3D, Direction, PearlVersion, Cannon, Pearl, CannonMode, LayoutDirection,
-    calculate_tnt_amount, calculate_pearl_trace
+    Cannon,
+    LayoutDirection,
+    Pearl,
+    PearlVersion,
+    Space3D,
+    calculate_pearl_trace,
+    calculate_tnt_amount,
 )
 
 MAX_SIMULATION_TICKS = 10000
@@ -28,7 +33,7 @@ MAX_TICK_LIMIT = 100  # Maximum tick limit for finding solutions
 
 
 def load_config(config_str: str) -> dict:
-    if config_str == '' or config_str is None:
+    if config_str == "" or config_str is None:
         return {"data": None, "msg": "还没有珍珠炮的配置喵~"}
     try:
         pearl_config = json.loads(config_str)
@@ -39,9 +44,9 @@ def load_config(config_str: str) -> dict:
 
 def parse_space3d(data: dict) -> Space3D:
     return Space3D(
-        data.get('X', data.get('x', 0.0)),
-        data.get('Y', data.get('y', 0.0)),
-        data.get('Z', data.get('z', 0.0))
+        data.get("X", data.get("x", 0.0)),
+        data.get("Y", data.get("y", 0.0)),
+        data.get("Z", data.get("z", 0.0)),
     )
 
 
@@ -58,29 +63,34 @@ def parse_layout_direction(s: str) -> LayoutDirection:
 def create_cannon_from_config(config: dict) -> tuple:
     settings = config
 
-    pearl_data = settings['Pearl']
+    pearl_data = settings["Pearl"]
     pearl = Pearl(
-        position=parse_space3d(pearl_data['Position']),
-        motion=parse_space3d(pearl_data['Motion']),
-        offset=Space3D(settings['Offset']['X'], 0.0, settings['Offset']['Z'])
+        position=parse_space3d(pearl_data["Position"]),
+        motion=parse_space3d(pearl_data["Motion"]),
+        offset=Space3D(settings["Offset"]["X"], 0.0, settings["Offset"]["Z"]),
     )
 
-    default_red_duper = parse_layout_direction(settings.get('DefaultRedDirection', 'NorthWest'))
-    default_blue_duper = parse_layout_direction(settings.get('DefaultBlueDirection', 'SouthEast'))
+    default_red_duper = parse_layout_direction(
+        settings.get("DefaultRedDirection", "NorthWest")
+    )
+    default_blue_duper = parse_layout_direction(
+        settings.get("DefaultBlueDirection", "SouthEast")
+    )
 
     cannon = Cannon(
         pearl=pearl,
-        north_west_tnt=parse_space3d(settings['NorthWestTNT']),
-        north_east_tnt=parse_space3d(settings['NorthEastTNT']),
-        south_west_tnt=parse_space3d(settings['SouthWestTNT']),
-        south_east_tnt=parse_space3d(settings['SouthEastTNT']),
+        north_west_tnt=parse_space3d(settings["NorthWestTNT"]),
+        north_east_tnt=parse_space3d(settings["NorthEastTNT"]),
+        south_west_tnt=parse_space3d(settings["SouthWestTNT"]),
+        south_east_tnt=parse_space3d(settings["SouthEastTNT"]),
         default_red_duper=default_red_duper,
         default_blue_duper=default_blue_duper,
     )
 
-    max_tnt = settings.get('MaxTNT', 1000)
+    max_tnt = settings.get("MaxTNT", 1000)
 
     return cannon, max_tnt
+
 
 def get_pearl_version(config_version: str):
     if config_version == "Legacy":
@@ -102,8 +112,9 @@ def process_bit_config(bit_config: str) -> list[int]:
             items.append(int(item.strip()))
         return items
 
-    except:
+    except Exception:
         return []
+
 
 def process_direction_bit(direction_bit: str):
     """
@@ -140,48 +151,61 @@ def calculate_bit_encoding(value: int, bit_counts: list[int]) -> str:
     if remaining > 0:
         print(f"Warning: 无法完全表示 {value}，剩余 {remaining}")
 
-    return ''.join(['1' if selected[i] else '0' for i in range(len(bit_counts))])
+    return "".join(["1" if selected[i] else "0" for i in range(len(bit_counts))])
+
 
 class PearlCalculatorUtils:
     def __init__(self, config: dict):
-        self.config = config.get('pearl_config')
-        self.pearl_version = get_pearl_version(config.get('pearl_version'))
-        self.red_bit_count = process_bit_config(config.get('red_bit_count'))
-        self.blue_bit_count = process_bit_config(config.get('blue_bit_count'))
-        self.direction_dict = process_direction_bit(config.get('direction_bit'))
-        self.real_red_color = config.get('real_red_color')
-        self.real_blue_color = config.get('real_red_color')
+        self.config = config.get("pearl_config")
+        self.pearl_version = get_pearl_version(config.get("pearl_version"))
+        self.red_bit_count = process_bit_config(config.get("red_bit_count"))
+        self.blue_bit_count = process_bit_config(config.get("blue_bit_count"))
+        self.direction_dict = process_direction_bit(config.get("direction_bit"))
+        self.real_red_color = config.get("real_red_color")
+        self.real_blue_color = config.get("real_red_color")
 
-    async def pearl_calculator(self, target_x: int, target_z: int) -> dict:
-        """
-
-        """
+    async def pearl_calculator(self, target_x: int, target_z: int) -> tuple[bool, Any]:
+        """ """
         # 校验珍珠版本
         if self.pearl_version == "UNKNOWN":
-            return {"data": None, "msg": "游戏版本识别失败喵~"}
+            return False, "游戏版本识别失败喵~"
         # 加载配置文件
         pearl_config = load_config(self.config)
         if pearl_config["msg"] != "success":
-            return {"data": None, "msg": pearl_config["msg"]}
+            return False, pearl_config["msg"]
         pearl_config = pearl_config["data"]
         cannon, max_tnt = create_cannon_from_config(pearl_config)
 
         # 计算TNT当量
         destination = Space3D(target_x, 0.0, target_z)
-        results = calculate_tnt_amount(cannon, destination, max_tnt, None, MAX_SIMULATION_TICKS, SEARCH_TOLERANCE_BLOCKS, self.pearl_version,)
+        results = calculate_tnt_amount(
+            cannon,
+            destination,
+            max_tnt,
+            None,
+            MAX_SIMULATION_TICKS,
+            SEARCH_TOLERANCE_BLOCKS,
+            self.pearl_version,
+        )
         if not results:
-            return {"data": None, "msg": "算不出来喵呜˃̣̣̥᷄⌓˂̣̣̥᷅"}
+            return False, "算不出来喵呜˃̣̣̥᷄⌓˂̣̣̥᷅"
 
         # 拼装基础响应数据
         best = results[0]
-        result = dict()
+        result = {}
         result["redTNT"] = best.red
         result["blueTNT"] = best.blue
         result["direction"] = best.direction.name
         # 如果配置了阵列数量则加上bit编码结果
-        if len(self.red_bit_count) != 0 and len(self.blue_bit_count) != 0 and len(self.red_bit_count) == len(self.blue_bit_count):
+        if (
+            len(self.red_bit_count) != 0
+            and len(self.blue_bit_count) != 0
+            and len(self.red_bit_count) == len(self.blue_bit_count)
+        ):
             result["redTNTBit"] = calculate_bit_encoding(best.red, self.red_bit_count)
-            result["blueTNTBit"] = calculate_bit_encoding(best.blue, self.blue_bit_count)
+            result["blueTNTBit"] = calculate_bit_encoding(
+                best.blue, self.blue_bit_count
+            )
         # 如果配置了方向编码则加上方向bit编码结果
         if self.direction_dict.get(best.direction.name):
             result["direction_bit"] = self.direction_dict[best.direction.name]
@@ -192,13 +216,24 @@ class PearlCalculatorUtils:
 
         # 模拟珍珠轨迹
         sim_ticks = best.tick + 1
-        trace = calculate_pearl_trace(cannon, best.red, best.blue, best.vertical, best.direction, sim_ticks, [], self.pearl_version,)
+        trace = calculate_pearl_trace(
+            cannon,
+            best.red,
+            best.blue,
+            best.vertical,
+            best.direction,
+            sim_ticks,
+            [],
+            self.pearl_version,
+        )
         if trace is None:
-            return {"data": None, "msg": "珍珠轨迹模拟失败喵呜˃̣̣̥᷄⌓˂̣̣̥᷅"}
+            return False, "珍珠轨迹模拟失败喵呜˃̣̣̥᷄⌓˂̣̣̥᷅"
 
         # 选择的计算结果
         result["calculatedTick"] = best.tick
-        result["calculatedCoordinates"] = f"X:{trace.pearl_trace[best.tick].x:.2f} Y:{trace.pearl_trace[best.tick].y:.2f} Z:{trace.pearl_trace[best.tick].z:.2f}"
+        result["calculatedCoordinates"] = (
+            f"X:{trace.pearl_trace[best.tick].x:.2f} Y:{trace.pearl_trace[best.tick].y:.2f} Z:{trace.pearl_trace[best.tick].z:.2f}"
+        )
         # 路径
         pearl_path = []
         for tick in range(len(trace.pearl_trace)):
@@ -206,4 +241,4 @@ class PearlCalculatorUtils:
             pearl_path.append({"tick": tick, "x": pos.x, "y": pos.y, "z": pos.z})
         result["pearlPath"] = pearl_path
 
-        return {"data": result, "msg": "success"}
+        return True, result

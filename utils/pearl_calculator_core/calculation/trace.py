@@ -1,18 +1,18 @@
 import math
-from typing import List, Optional, Tuple
-from ..physics.world.space import Space3D
-from ..physics.world.direction import Direction
+
 from ..physics.aabb.aabb_box import AABBBox
 from ..physics.constants.constants import FLOAT_PRECISION_EPSILON
 from ..physics.entities.movement import PearlVersion
+from ..physics.world.direction import Direction
+from ..physics.world.space import Space3D
 from .inputs import Cannon, GeneralData
-from .results import TNTResult, CalculationResult
+from .results import CalculationResult, TNTResult
 from .simulation import find_best_hit_for_ticks, run
 from .vectors import resolve_vectors_for_direction
 
 
 def validate_candidates(
-    candidates: List[Tuple[Tuple[int, int, int], List[int]]],
+    candidates: list[tuple[tuple[int, int, int], list[int]]],
     red_vec: Space3D,
     blue_vec: Space3D,
     vert_vec: Space3D,
@@ -23,13 +23,13 @@ def validate_candidates(
     max_distance_sq: float,
     version: PearlVersion,
     calculation_direction: Direction
-) -> List[TNTResult]:
+) -> list[TNTResult]:
     start_abs_x = pearl_position.x + pearl_offset.x
     start_abs_y = pearl_position.y + pearl_offset.y
     start_abs_z = pearl_position.z + pearl_offset.z
     check_3d = vert_vec.length_sq() > FLOAT_PRECISION_EPSILON
 
-    raw_results: List[TNTResult] = []
+    raw_results: list[TNTResult] = []
 
     red_x = red_vec.x
     red_y = red_vec.y
@@ -96,11 +96,11 @@ def calculate_pearl_trace(
     vertical_tnt: int,
     direction: Direction,
     max_ticks: int,
-    world_collisions: List[AABBBox],
+    world_collisions: list[AABBBox],
     version: PearlVersion
-) -> Optional[CalculationResult]:
+) -> CalculationResult | None:
     red_vec, blue_vec, vert_vec = resolve_vectors_for_direction(cannon, direction)
-    
+
     total_tnt_motion = (red_vec * red_tnt) + (blue_vec * blue_tnt) + (vert_vec * vertical_tnt)
     final_motion = cannon.pearl.motion + total_tnt_motion
 
@@ -117,11 +117,11 @@ def calculate_pearl_trace(
 def calculate_raw_trace(
     pearl_position: Space3D,
     pearl_motion: Space3D,
-    tnt_charges: List[Tuple[Space3D, int]],
+    tnt_charges: list[tuple[Space3D, int]],
     max_ticks: int,
-    world_collisions: List[AABBBox],
+    world_collisions: list[AABBBox],
     version: PearlVersion
-) -> Optional[CalculationResult]:
+) -> CalculationResult | None:
     from .simulation import calculate_tnt_motion
 
     total_explosion_motion = Space3D()
@@ -142,11 +142,11 @@ def calculate_raw_trace(
 def run_trace_internal(
     position: Space3D,
     motion: Space3D,
-    offset: Optional[Space3D],
+    offset: Space3D | None,
     max_ticks: int,
-    world_collisions: List[AABBBox],
+    world_collisions: list[AABBBox],
     version: PearlVersion
-) -> Optional[CalculationResult]:
+) -> CalculationResult | None:
     data = GeneralData(
         pearl_position=position,
         pearl_motion=motion,

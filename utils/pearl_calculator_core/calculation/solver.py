@@ -1,13 +1,12 @@
 import math
-from typing import Dict, List, Tuple, Optional
-from ..physics.world.space import Space3D
-from ..physics.world.direction import Direction
+
 from ..physics.constants.constants import (
-    FLOAT_PRECISION_EPSILON, PEARL_DRAG_MULTIPLIER, PEARL_GRAVITY_ACCELERATION
+    FLOAT_PRECISION_EPSILON,
+    PEARL_DRAG_MULTIPLIER,
+    PEARL_GRAVITY_ACCELERATION,
 )
 from ..physics.entities.movement import PearlVersion
-from .inputs import Cannon
-from .results import TNTResult
+from ..physics.world.space import Space3D
 
 
 def solve_theoretical_tnt(
@@ -19,10 +18,10 @@ def solve_theoretical_tnt(
     destination: Space3D,
     max_ticks: int,
     version: PearlVersion
-) -> Dict[Tuple[int, int, int], List[int]]:
+) -> dict[tuple[int, int, int], list[int]]:
     true_distance = destination - start_pos
 
-    groups: Dict[Tuple[int, int, int], List[int]] = {}
+    groups: dict[tuple[int, int, int], list[int]] = {}
     drag_multiplier = PEARL_DRAG_MULTIPLIER
     denominator_constant = 1.0 - drag_multiplier
 
@@ -91,7 +90,7 @@ def solve_tnt_system_3d(
     blue: Space3D,
     vert: Space3D,
     target: Space3D
-) -> Optional[Tuple[float, float, float]]:
+) -> tuple[float, float, float] | None:
     det = red.dot(blue.cross(vert))
 
     if abs(det) < FLOAT_PRECISION_EPSILON:

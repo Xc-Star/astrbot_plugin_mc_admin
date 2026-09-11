@@ -11,15 +11,20 @@ Run with: python examples/usage.py
 """
 
 import json
-import time
-import sys
 import os
+import sys
+import time
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from pearl_calculator_core import (
-    Space3D, Direction, PearlVersion, Cannon, Pearl, CannonMode, LayoutDirection,
-    calculate_tnt_amount, calculate_pearl_trace
+    Cannon,
+    LayoutDirection,
+    Pearl,
+    PearlVersion,
+    Space3D,
+    calculate_pearl_trace,
+    calculate_tnt_amount,
 )
 
 MAX_SIMULATION_TICKS = 10000
@@ -28,15 +33,15 @@ MAX_TICK_LIMIT = 100  # Maximum tick limit for finding solutions
 
 
 def load_config(config_path: str) -> dict:
-    with open(config_path, 'r', encoding='utf-8') as f:
+    with open(config_path, encoding="utf-8") as f:
         return json.load(f)
 
 
 def parse_space3d(data: dict) -> Space3D:
     return Space3D(
-        data.get('X', data.get('x', 0.0)),
-        data.get('Y', data.get('y', 0.0)),
-        data.get('Z', data.get('z', 0.0))
+        data.get("X", data.get("x", 0.0)),
+        data.get("Y", data.get("y", 0.0)),
+        data.get("Z", data.get("z", 0.0))
     )
 
 
@@ -51,29 +56,29 @@ def parse_layout_direction(s: str) -> LayoutDirection:
 
 
 def create_cannon_from_config(config: dict) -> tuple:
-    settings = config['CannonSettings'][0]
+    settings = config["CannonSettings"][0]
 
-    pearl_data = settings['Pearl']
+    pearl_data = settings["Pearl"]
     pearl = Pearl(
-        position=parse_space3d(pearl_data['Position']),
-        motion=parse_space3d(pearl_data['Motion']),
-        offset=Space3D(settings['Offset']['X'], 0.0, settings['Offset']['Z'])
+        position=parse_space3d(pearl_data["Position"]),
+        motion=parse_space3d(pearl_data["Motion"]),
+        offset=Space3D(settings["Offset"]["X"], 0.0, settings["Offset"]["Z"])
     )
 
-    default_red_duper = parse_layout_direction(settings.get('DefaultRedDirection', 'NorthWest'))
-    default_blue_duper = parse_layout_direction(settings.get('DefaultBlueDirection', 'SouthEast'))
+    default_red_duper = parse_layout_direction(settings.get("DefaultRedDirection", "NorthWest"))
+    default_blue_duper = parse_layout_direction(settings.get("DefaultBlueDirection", "SouthEast"))
 
     cannon = Cannon(
         pearl=pearl,
-        north_west_tnt=parse_space3d(settings['NorthWestTNT']),
-        north_east_tnt=parse_space3d(settings['NorthEastTNT']),
-        south_west_tnt=parse_space3d(settings['SouthWestTNT']),
-        south_east_tnt=parse_space3d(settings['SouthEastTNT']),
+        north_west_tnt=parse_space3d(settings["NorthWestTNT"]),
+        north_east_tnt=parse_space3d(settings["NorthEastTNT"]),
+        south_west_tnt=parse_space3d(settings["SouthWestTNT"]),
+        south_east_tnt=parse_space3d(settings["SouthEastTNT"]),
         default_red_duper=default_red_duper,
         default_blue_duper=default_blue_duper,
     )
 
-    max_tnt = settings.get('MaxTNT', 1000)
+    max_tnt = settings.get("MaxTNT", 1000)
 
     return cannon, max_tnt
 
@@ -82,7 +87,7 @@ def main():
     print("=== PearlCalculator 核心API示例 (Python) ===")
 
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    config_path = os.path.join(script_dir, 'config.example.json')
+    config_path = os.path.join(script_dir, "config.example.json")
 
     if not os.path.exists(config_path):
         print(f"错误：在 {config_path} 找不到配置文件")

@@ -1,17 +1,27 @@
 from __future__ import annotations
+
 import math
-from typing import List, Optional, Tuple
 from dataclasses import dataclass
-from ..physics.world.space import Space3D
+
 from ..physics.aabb.aabb_box import AABBBox
 from ..physics.constants.constants import (
-    FLOAT_PRECISION_EPSILON, PEARL_EXPLOSION_Y_FACTOR, PEARL_HEIGHT,
-    TNT_ENTITY_Y_OFFSET, TNT_EXPLOSION_RADIUS, PEARL_DRAG_MULTIPLIER,
-    PEARL_GRAVITY_ACCELERATION
+    FLOAT_PRECISION_EPSILON,
+    PEARL_DRAG_MULTIPLIER,
+    PEARL_EXPLOSION_Y_FACTOR,
+    PEARL_GRAVITY_ACCELERATION,
+    PEARL_HEIGHT,
+    TNT_ENTITY_Y_OFFSET,
+    TNT_EXPLOSION_RADIUS,
 )
-from ..physics.entities.movement import PearlVersion, MovementLegacy, MovementPost1205, MovementPost1212
+from ..physics.entities.movement import (
+    MovementLegacy,
+    MovementPost1205,
+    MovementPost1212,
+    PearlVersion,
+)
 from ..physics.entities.pearl_entities import PearlEntity
 from ..physics.entities.tnt_entities import TNTEntity
+from ..physics.world.space import Space3D
 from .inputs import GeneralData
 from .results import CalculationResult
 
@@ -39,12 +49,12 @@ _NO_COLLISION_FACTOR_CACHE: dict[PearlVersion, list[tuple[float, float, float, f
 
 def run(
     data: GeneralData,
-    destination: Optional[Space3D],
+    destination: Space3D | None,
     max_ticks: int,
-    world_collisions: List[AABBBox],
-    offset: Optional[Space3D],
+    world_collisions: list[AABBBox],
+    offset: Space3D | None,
     version: PearlVersion
-) -> Optional[CalculationResult]:
+) -> CalculationResult | None:
     movement = _MOVEMENT_MAP[version]
     return run_internal(movement, data, destination, max_ticks, world_collisions, offset)
 
@@ -52,19 +62,19 @@ def run(
 def run_internal(
     movement,
     data: GeneralData,
-    destination: Optional[Space3D],
+    destination: Space3D | None,
     max_ticks: int,
-    world_collisions: List[AABBBox],
-    offset: Optional[Space3D]
-) -> Optional[CalculationResult]:
+    world_collisions: list[AABBBox],
+    offset: Space3D | None
+) -> CalculationResult | None:
     if not world_collisions:
         return _run_without_collisions(data, destination, max_ticks, offset, movement is MovementPost1212)
 
     pearl = PearlEntity.create(data.pearl_position, data.pearl_motion)
     tnt_entities = [TNTEntity.create(tnt.position, tnt.fuse) for tnt in data.tnt_charges]
 
-    traces: List[Space3D] = [pearl.data.position.copy()]
-    motion_traces: List[Space3D] = [pearl.data.motion.copy()]
+    traces: list[Space3D] = [pearl.data.position.copy()]
+    motion_traces: list[Space3D] = [pearl.data.motion.copy()]
 
     for tick in range(max_ticks):
         for tnt in tnt_entities:
@@ -106,13 +116,13 @@ def scan_trajectory(
     data: GeneralData,
     destination: Space3D,
     max_tick: int,
-    valid_ticks: List[bool],
-    world_collisions: List[AABBBox],
+    valid_ticks: list[bool],
+    world_collisions: list[AABBBox],
     offset: Space3D,
     version: PearlVersion,
     max_distance_sq: float,
     check_3d: bool
-) -> List[SimResult]:
+) -> list[SimResult]:
     movement = _MOVEMENT_MAP[version]
     return scan_internal(
         movement, data, destination, max_tick, valid_ticks,
@@ -123,12 +133,12 @@ def scan_trajectory(
 def find_best_hit_for_ticks(
     data: GeneralData,
     destination: Space3D,
-    ticks: List[int],
+    ticks: list[int],
     offset: Space3D,
     version: PearlVersion,
     max_distance_sq: float,
     check_3d: bool
-) -> Optional[SimResult]:
+) -> SimResult | None:
     if not ticks:
         return None
 
@@ -156,19 +166,19 @@ def scan_internal(
     data: GeneralData,
     destination: Space3D,
     max_tick: int,
-    valid_ticks: List[bool],
-    world_collisions: List[AABBBox],
+    valid_ticks: list[bool],
+    world_collisions: list[AABBBox],
     offset: Space3D,
     max_distance_sq: float,
     check_3d: bool
-) -> List[SimResult]:
+) -> list[SimResult]:
     if not world_collisions:
         return _scan_without_collisions(
             data, destination, max_tick, valid_ticks, offset,
             max_distance_sq, check_3d, movement is MovementPost1212
         )
 
-    results: List[SimResult] = []
+    results: list[SimResult] = []
     pearl = PearlEntity.create(data.pearl_position, data.pearl_motion)
     tnt_entities = [TNTEntity.create(tnt.position, tnt.fuse) for tnt in data.tnt_charges]
 
@@ -222,15 +232,15 @@ def calculate_tnt_motion(pearl_pos: Space3D, tnt_pos: Space3D) -> Space3D:
     return explosion_vec * explosion_strength
 
 
-def _deduplicate(lst: List[Space3D]) -> List[Space3D]:
-    result: List[Space3D] = []
+def _deduplicate(lst: list[Space3D]) -> list[Space3D]:
+    result: list[Space3D] = []
     for item in lst:
         if not result or item != result[-1]:
             result.append(item)
     return result
 
 
-def _advance_motion(x: float, y: float, z: float, post1212: bool) -> Tuple[float, float, float, float, float, float]:
+def _advance_motion(x: float, y: float, z: float, post1212: bool) -> tuple[float, float, float, float, float, float]:
     if post1212:
         y -= PEARL_GRAVITY_ACCELERATION
         x *= PEARL_DRAG_MULTIPLIER
@@ -262,7 +272,7 @@ def _apply_tnt_charges(
     motion_x: float,
     motion_y: float,
     motion_z: float
-) -> Tuple[float, float, float]:
+) -> tuple[float, float, float]:
     pearl_pos = Space3D(pos_x, pos_y, pos_z)
     for tnt_pos in charges:
         delta = calculate_tnt_motion(pearl_pos, tnt_pos)
@@ -274,9 +284,9 @@ def _apply_tnt_charges(
 
 def _run_without_collisions(
     data: GeneralData,
-    destination: Optional[Space3D],
+    destination: Space3D | None,
     max_ticks: int,
-    offset: Optional[Space3D],
+    offset: Space3D | None,
     post1212: bool
 ) -> CalculationResult:
     pos_x = data.pearl_position.x
@@ -286,8 +296,8 @@ def _run_without_collisions(
     motion_y = data.pearl_motion.y
     motion_z = data.pearl_motion.z
 
-    traces: List[Space3D] = [Space3D(pos_x, pos_y, pos_z)]
-    motion_traces: List[Space3D] = [Space3D(motion_x, motion_y, motion_z)]
+    traces: list[Space3D] = [Space3D(pos_x, pos_y, pos_z)]
+    motion_traces: list[Space3D] = [Space3D(motion_x, motion_y, motion_z)]
     if not data.tnt_charges:
         if post1212:
             for _ in range(max_ticks):
@@ -358,12 +368,12 @@ def _scan_without_collisions(
     data: GeneralData,
     destination: Space3D,
     max_tick: int,
-    valid_ticks: List[bool],
+    valid_ticks: list[bool],
     offset: Space3D,
     max_distance_sq: float,
     check_3d: bool,
     post1212: bool
-) -> List[SimResult]:
+) -> list[SimResult]:
     pos_x = data.pearl_position.x
     pos_y = data.pearl_position.y
     pos_z = data.pearl_position.z
@@ -377,7 +387,7 @@ def _scan_without_collisions(
     dest_y = destination.y
     dest_z = destination.z
 
-    results: List[SimResult] = []
+    results: list[SimResult] = []
 
     if not data.tnt_charges:
         if post1212:
@@ -484,12 +494,12 @@ def _scan_without_collisions(
 def _find_best_hit_without_collisions(
     data: GeneralData,
     destination: Space3D,
-    ticks: List[int],
+    ticks: list[int],
     offset: Space3D,
     version: PearlVersion,
     max_distance_sq: float,
     check_3d: bool
-) -> Optional[SimResult]:
+) -> SimResult | None:
     pos_x = data.pearl_position.x
     pos_y = data.pearl_position.y
     pos_z = data.pearl_position.z
@@ -503,7 +513,7 @@ def _find_best_hit_without_collisions(
     dest_y = destination.y
     dest_z = destination.z
 
-    best_result: Optional[SimResult] = None
+    best_result: SimResult | None = None
     no_collision_factors = _ensure_no_collision_factors(version, ticks[-1])
 
     for tick in ticks:

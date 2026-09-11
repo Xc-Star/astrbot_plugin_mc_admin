@@ -1,14 +1,20 @@
 import asyncio
 import sys
+
 import astrbot.api.message_components as Comp
-from astrbot.api.event import filter, AstrMessageEvent
-from astrbot.api.star import Context, Star, register
 from astrbot.api import logger
+from astrbot.api.event import AstrMessageEvent, filter
+from astrbot.api.star import Context, Star, register
 from astrbot.core import AstrBotConfig
+
 from .utils.command.main import CommandUtils
-from .utils.decorators import in_enabled_groups, requires_enabled
+from .utils.config_utils.container import (
+    TaskTempCache,
+    get_service,
+    init_container,
+)
 from .utils.db import DbUtils
-from cachetools import TTLCache
+from .utils.decorators import in_enabled_groups, requires_enabled
 
 
 # TODO: 区块回档
@@ -18,23 +24,162 @@ from cachetools import TTLCache
     "astrbot_plugin_mc_admin",
     "Xc_Star",
     "这是 Minecraft 服务器 的管理插件，支持群组服，RCON命令，list，珍珠炮落点计算，服务器工程坐标，备货清单，白名单管理等功能",
-    "2.3.0",
+    "2.4.0",
     "https://github.com/Xc-Star/astrbot_plugin_mc_admin",
 )
 class McAdminPlugin(Star):
     def __init__(self, context: Context, config: AstrBotConfig):
 
         super().__init__(context)
+        # 初始化容器
         self.config = config
+        # 初始化 DI 依赖
+        init_container(config, context)
+
         # 连接数据库
-        self.db_util = DbUtils()
-        self.command_utils = CommandUtils(config, self.db_util.get_conn(), context)
-        self.task_temp = TTLCache(maxsize=50, ttl=300)
+        self.db_util = get_service(DbUtils)
+        self.command_utils = get_service(CommandUtils)
+        self.task_temp = get_service(TaskTempCache)
 
     async def initialize(self):
         """可选择实现异步的插件初始化方法，当实例化该插件类之后会自动调用该方法。"""
         # 检查并安装 Playwright Chromium
         await self._ensure_playwright_installed()
+
+    @filter.command("test")
+    async def test(self, event: AstrMessageEvent):
+        yield event.plain_result("test")
+
+    @filter.command("mc")
+    @in_enabled_groups()
+    async def mc(self, event: AstrMessageEvent):
+        msg = event.message_str
+        result = await self.command_utils.mc(msg, event)
+        if result["type"] == "image":
+            yield event.image_result(result["msg"])
+        else:
+            yield event.plain_result(result["msg"])
+
+    @filter.command("mcdr")
+    @in_enabled_groups()
+    async def mcdr(self, event: AstrMessageEvent):
+        logger.info(f"开始执行mcdr命令: {event.message_str}")
+        msg = event.message_str
+        result = await self.command_utils.mcdr(msg, event)
+        yield event.plain_result(result["msg"])
+
+    @filter.command("say")
+    @in_enabled_groups()
+    async def say(self, event: AstrMessageEvent):
+        # msg移除最前面的"say "指令部分
+        logger.info(f"开始执行say命令: {event.message_str}")
+        msg = event.message_str.removeprefix("say ").strip()
+        sender_name = event.get_sender_name()
+        send_msg = f"{sender_name}: {msg}"
+        await self.command_utils.broadcast_msg(send_msg)
+        yield event.plain_result("帮你发过去了喵~")
+
+    @filter.command("loc")
+    @in_enabled_groups()
+    async def loc(self, event: AstrMessageEvent):
+        logger.info(f"开始执行loc命令: {event.message_str}")
+        msg = event.message_str
+        result = await self.command_utils.loc(msg)
+        if result["type"] == "image":
+            yield event.image_result(result["msg"])
+        else:
+            yield event.plain_result(result["msg"])
+
+    @filter.command("list")
+    @in_enabled_groups()
+    async def list_players(self, event: AstrMessageEvent):
+        logger.info("开始执行list命令")
+        result = await self.command_utils.list_players()
+        yield event.image_result(result)
+
+    @filter.command("原图")
+    @in_enabled_groups()
+    @requires_enabled(
+        "enable_get_last_background_image",
+        "获取原图功能暂未启用",
+        allow_admin_bypass=True,
+    )
+    async def get_background_image(self, event: AstrMessageEvent):
+        logger.info("开始执行获取原图命令")
+        yield event.image_result(self.command_utils.get_image())
+
+    @filter.command("原图u")
+    @in_enabled_groups()
+    @requires_enabled(
+        "enable_get_last_background_image",
+        "获取原图功能暂未启用",
+        allow_admin_bypass=True,
+    )
+    async def get_background_image_url(self, event: AstrMessageEvent):
+        logger.info("开始执行获取原图命令")
+        yield event.plain_result(self.command_utils.get_image())
+
+    @filter.command("抽卡")
+    @in_enabled_groups()
+    @requires_enabled(
+        "enable_background_image_random", "抽卡功能暂未启用", allow_admin_bypass=True
+    )
+    async def get_random_image(self, event: AstrMessageEvent):
+        logger.info("开始执行抽卡命令")
+        yield event.image_result(self.command_utils.get_random_image())
+
+    @filter.command("task")
+    @in_enabled_groups()
+    async def task(self, event: AstrMessageEvent):
+        logger.info(f"开始执行task命令: {event.message_str}")
+        msg = event.message_str
+        result = await self.command_utils.task(msg, event)
+        if result["type"] == "text":
+            yield event.plain_result(result["msg"])
+        elif result["type"] == "image":
+            yield event.image_result(result["msg"])
+        elif result["type"] == "image_list":
+            assert isinstance(result["msg"], list)
+            for img in result["msg"]:
+                yield event.image_result(img)
+        elif result["type"] == "file":
+            chain = [
+                Comp.File(file=result.get("file_path"), name=result.get("file_name"))
+            ]
+            yield event.chain_result(chain)
+
+    @filter.event_message_type(filter.EventMessageType.ALL)
+    @in_enabled_groups()
+    async def on_all_message(self, event: AstrMessageEvent):
+        if f"{event.get_group_id()}_{event.get_sender_id()}" not in self.task_temp:
+            return
+        res = await self.command_utils.material(event)
+        if res:
+            yield event.plain_result(res)
+
+    @filter.command("zz")
+    @in_enabled_groups()
+    async def zz(self, event: AstrMessageEvent):
+        logger.info("开始执行珍珠炮计算命令")
+        msg = event.message_str
+        res = await self.command_utils.zz(msg)
+        if res["type"] == "text":
+            yield event.plain_result(res["msg"])
+        elif res["type"] == "image":
+            yield event.image_result(res["msg"])
+
+    @filter.command("wiki")
+    @in_enabled_groups()
+    async def wiki(self, event: AstrMessageEvent):
+        logger.info(f"开始执行wiki命令: {event.message_str}")
+        question = event.message_str.removeprefix("wiki").strip()
+        if not question:
+            logger.warning("wiki命令未输入问题")
+            yield event.plain_result("请输入要查询的内容喵~\n用法: wiki <问题>")
+            return
+        yield event.plain_result("等我查查喵~")
+        result = await self.command_utils.wiki(question)
+        yield event.plain_result(result["msg"])
 
     async def _ensure_playwright_installed(self):
         """确保 Playwright Chromium 已安装
@@ -88,148 +233,9 @@ class McAdminPlugin(Star):
             logger.error(f"安装 Playwright Chromium 时出错: {install_error}")
             logger.error("请手动执行: playwright install chromium")
 
-    # @filter.command("test")
-    async def test(self, event: AstrMessageEvent):
-        # logger.info(self.config)
-        # msg = f"keys：{str(list(self.task_temp.keys()))},values：{str(list(self.task_temp.values()))}"
-        # yield event.plain_result(msg)
-        # yield event.image_result("https://img.xcstar.top/file/mc_admin/minecraft_copper_nugget.png")
-        yield event.image_result("https://img.xcstar.top/file/resources/desktop/BDA12EDD-5682-497A-83BE-C8884AFFCE3E.webp")
-
-    @filter.command("mc")
-    @in_enabled_groups()
-    async def mc(self, event: AstrMessageEvent):
-        msg = event.message_str
-        result = await self.command_utils.mc(msg, event)
-        if result["type"] == "image":
-            yield event.image_result(result["msg"])
-        else:
-            yield event.plain_result(result["msg"])
-
-    @filter.command("mcdr")
-    @in_enabled_groups()
-    async def mcdr(self, event: AstrMessageEvent):
-        logger.info(f"开始执行mcdr命令: {event.message_str}")
-        msg = event.message_str
-        result = await self.command_utils.mcdr(msg, event)
-        yield event.plain_result(result["msg"])
-
-    @filter.command("say")
-    @in_enabled_groups()
-    async def say(self, event: AstrMessageEvent):
-        # msg移除最前面的"say "指令部分
-        logger.info(f"开始执行say命令: {event.message_str}")
-        msg = event.message_str.removeprefix("say ").strip()
-        sender_name = event.get_sender_name()
-        send_msg = f"{sender_name}: {msg}"
-        await self.command_utils.broadcast_msg(send_msg)
-        yield event.plain_result("帮你发过去了喵~")
-
-    @filter.command("loc")
-    @in_enabled_groups()
-    async def loc(self, event: AstrMessageEvent):
-        logger.info(f"开始执行loc命令: {event.message_str}")
-        msg = event.message_str
-        result = await self.command_utils.loc(msg, event)
-        if result["type"] == "image":
-            yield event.image_result(result["msg"])
-        else:
-            yield event.plain_result(result["msg"])
-
-    @filter.command("list")
-    @in_enabled_groups()
-    async def list_players(self, event: AstrMessageEvent):
-        logger.info(f"开始执行list命令")
-        result = await self.command_utils.list_players()
-        yield event.image_result(result)
-
-    @filter.command("原图")
-    @in_enabled_groups()
-    @requires_enabled(
-        "enable_get_last_background_image",
-        "获取原图功能暂未启用",
-        allow_admin_bypass=True,
-    )
-    async def get_background_image(self, event: AstrMessageEvent):
-        logger.info(f"开始执行获取原图命令")
-        yield event.image_result(self.command_utils.get_image())
-
-    @filter.command("原图u")
-    @in_enabled_groups()
-    @requires_enabled(
-        "enable_get_last_background_image",
-        "获取原图功能暂未启用",
-        allow_admin_bypass=True,
-    )
-    async def get_background_image_url(self, event: AstrMessageEvent):
-        logger.info(f"开始执行获取原图命令")
-        yield event.plain_result(self.command_utils.get_image())
-
-    @filter.command("抽卡")
-    @in_enabled_groups()
-    @requires_enabled(
-        "enable_background_image_random", "抽卡功能暂未启用", allow_admin_bypass=True
-    )
-    async def get_random_image(self, event: AstrMessageEvent):
-        logger.info(f"开始执行抽卡命令")
-        yield event.image_result(self.command_utils.get_random_image())
-
-    @filter.event_message_type(filter.EventMessageType.ALL)
-    @in_enabled_groups()
-    async def on_all_message(self, event: AstrMessageEvent):
-        if f"{event.get_group_id()}_{event.get_sender_id()}" not in self.task_temp:
-            return
-        res = await self.command_utils.material(self.task_temp, event)
-        if res is not None:
-            yield event.plain_result(res)
-
-    @filter.command("task")
-    @in_enabled_groups()
-    async def task(self, event: AstrMessageEvent):
-        logger.info(f"开始执行task命令: {event.message_str}")
-        msg = event.message_str
-        result = await self.command_utils.task(msg, event, self.task_temp)
-        if result["type"] == "text":
-            yield event.plain_result(result["msg"])
-        elif result["type"] == "image":
-            yield event.image_result(result["msg"])
-        elif result["type"] == "image_list":
-            assert isinstance(result["msg"], list)
-            for img in result["msg"]:
-                yield event.image_result(img)
-        elif result["type"] == "file":
-            chain = [
-                Comp.File(file=result.get("file_path"), name=result.get("file_name"))
-            ]
-            yield event.chain_result(chain)
-
-
-    @filter.command("zz")
-    @in_enabled_groups()
-    async def zz(self, event: AstrMessageEvent):
-        logger.info(f"开始执行珍珠炮计算命令")
-        msg = event.message_str
-        res = await self.command_utils.zz(msg, event)
-        if res["type"] == "text":
-            yield event.plain_result(res["msg"])
-        elif res["type"] == "image":
-            yield event.image_result(res["msg"])
-
-    @filter.command("wiki")
-    @in_enabled_groups()
-    async def wiki(self, event: AstrMessageEvent):
-        logger.info(f"开始执行wiki命令: {event.message_str}")
-        question = event.message_str.removeprefix("wiki").strip()
-        if not question:
-            logger.warning(f"wiki命令未输入问题")
-            yield event.plain_result("请输入要查询的内容喵~\n用法: wiki <问题>")
-            return
-        yield event.plain_result("等我查查喵~")
-        result = await self.command_utils.wiki(question)
-        yield event.plain_result(result["msg"])
-
     async def terminate(self):
         """可选择实现异步的插件销毁方法，当插件被卸载/停用时会调用。"""
+        self.task_temp.clear()
         # 关闭 browser 实例（使用 ImageUtils 的，TaskUtils 只是转发）
         await self.command_utils.image_utils.close_browser()
         # 关闭 Wiki HTTP 客户端

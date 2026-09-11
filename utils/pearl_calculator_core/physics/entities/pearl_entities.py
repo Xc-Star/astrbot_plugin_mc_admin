@@ -1,8 +1,10 @@
 from __future__ import annotations
+
 from dataclasses import dataclass
-from ..world.space import Space3D
+
 from ..aabb.aabb_box import AABBBox
 from ..constants.constants import PEARL_HEIGHT, PEARL_RADIUS
+from ..world.space import Space3D
 from .entities import EntityData
 
 

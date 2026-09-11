@@ -1,4 +1,3 @@
-import math
 
 PEARL_GRAVITY_ACCELERATION: float = 0.03
 PEARL_DRAG_MULTIPLIER: float = 0.99

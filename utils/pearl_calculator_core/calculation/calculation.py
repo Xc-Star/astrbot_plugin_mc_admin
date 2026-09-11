@@ -1,13 +1,13 @@
 from __future__ import annotations
-from typing import List, Optional
-from ..physics.world.space import Space3D
-from ..physics.world.direction import Direction
+
 from ..physics.constants.constants import FLOAT_PRECISION_EPSILON
 from ..physics.entities.movement import PearlVersion
+from ..physics.world.direction import Direction
+from ..physics.world.space import Space3D
 from .inputs import Cannon
+from .optimizer import SearchParams, generate_candidates
 from .results import TNTResult
 from .solver import solve_theoretical_tnt
-from .optimizer import generate_candidates, SearchParams
 from .trace import validate_candidates
 from .vectors import resolve_vectors_for_direction
 
@@ -16,11 +16,11 @@ def calculate_tnt_amount(
     cannon: Cannon,
     destination: Space3D,
     max_tnt: int,
-    max_vertical_tnt: Optional[int],
+    max_vertical_tnt: int | None,
     max_ticks: int,
     max_distance: float,
     version: PearlVersion
-) -> List[TNTResult]:
+) -> list[TNTResult]:
     pearl_start_absolute_pos = cannon.pearl.position + cannon.pearl.offset
     true_distance = destination - pearl_start_absolute_pos
 
@@ -31,7 +31,7 @@ def calculate_tnt_amount(
     flight_directions = Direction.from_angle_with_fallbacks(yaw)
 
     max_distance_sq = max_distance * max_distance
-    all_results: List[TNTResult] = []
+    all_results: list[TNTResult] = []
 
     for flight_direction in flight_directions:
         red_vec, blue_vec, vert_vec = resolve_vectors_for_direction(cannon, flight_direction)

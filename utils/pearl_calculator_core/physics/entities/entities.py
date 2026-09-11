@@ -1,8 +1,9 @@
 from __future__ import annotations
-from dataclasses import dataclass, field
-from typing import List
-from ..world.space import Space3D
+
+from dataclasses import dataclass
+
 from ..aabb.aabb_box import AABBBox
+from ..world.space import Space3D
 
 
 @dataclass
@@ -15,7 +16,7 @@ class EntityData:
     is_collided_vertically: bool = False
     is_gravity: bool = False
 
-    def move_entity(self, xa: float, ya: float, za: float, world_collisions: List[AABBBox]) -> None:
+    def move_entity(self, xa: float, ya: float, za: float, world_collisions: list[AABBBox]) -> None:
         original_xa = xa
         original_ya = ya
         original_za = za

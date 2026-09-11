@@ -1,8 +1,9 @@
 import os
 from collections import Counter
+
+import nbtlib
 import numpy as np
 from numba import jit
-import nbtlib
 
 
 @jit(nopython=True)
@@ -55,16 +56,16 @@ def parse_litematic(file_path):
         nbt_file = nbtlib.load(file_path)
 
         regions_info = {}
-        regions = nbt_file.get('Regions', {})
+        regions = nbt_file.get("Regions", {})
 
         for region_name, region_data in regions.items():
-            palette = region_data.get('BlockStatePalette', [])
-            block_states_raw = region_data.get('BlockStates', [])
+            palette = region_data.get("BlockStatePalette", [])
+            block_states_raw = region_data.get("BlockStates", [])
 
-            size = region_data.get('Size', {})
-            width = abs(int(size.get('x', 0)))
-            height = abs(int(size.get('y', 0)))
-            length = abs(int(size.get('z', 0)))
+            size = region_data.get("Size", {})
+            width = abs(int(size.get("x", 0)))
+            height = abs(int(size.get("y", 0)))
+            length = abs(int(size.get("z", 0)))
 
             bits_per_block = max(2, (len(palette) - 1).bit_length())
 
@@ -80,7 +81,7 @@ def parse_litematic(file_path):
             for idx, count in zip(unique_indices, counts):
                 idx_int = int(idx)
                 if idx_int < len(palette):
-                    block_name = str(palette[idx_int].get('Name', 'unknown'))
+                    block_name = str(palette[idx_int].get("Name", "unknown"))
                     if block_name != "minecraft:air":
                         block_counts[block_name] += int(count)
 

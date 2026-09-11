@@ -1,13 +1,14 @@
 from __future__ import annotations
+
 from dataclasses import dataclass
-from typing import Dict, List, Set, Tuple, Optional
+
 from ..settings.types import CannonMode
 
 
 @dataclass
 class SearchParams:
     max_tnt: int
-    max_vertical_tnt: Optional[int]
+    max_vertical_tnt: int | None
     search_radius: int
     has_vertical: bool
     is_valid_3d: bool
@@ -15,12 +16,12 @@ class SearchParams:
 
 
 def generate_candidates(
-    theoretical_groups: Dict[Tuple[int, int, int], List[int]],
+    theoretical_groups: dict[tuple[int, int, int], list[int]],
     params: SearchParams
-) -> List[Tuple[Tuple[int, int, int], List[int]]]:
+) -> list[tuple[tuple[int, int, int], list[int]]]:
     v_range = range(-1, 2) if params.has_vertical and params.is_valid_3d else range(0, 1)
 
-    unique_candidates: Dict[Tuple[int, int, int], Set[int]] = {}
+    unique_candidates: dict[tuple[int, int, int], set[int]] = {}
 
     for (center_red, center_blue, center_vert), valid_ticks in theoretical_groups.items():
         for r_offset in range(-params.search_radius, params.search_radius + 1):

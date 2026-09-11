@@ -1,10 +1,12 @@
 import re
-from typing import Any
+from typing import Annotated, Any
 
 import httpx
+from wireup import Inject, injectable
 
 from astrbot.api import logger
 from astrbot.api.star import Context
+
 from ..http import AsyncHttpClient
 
 WIKI_API_URL = "https://zh.minecraft.wiki/api.php"
@@ -70,8 +72,9 @@ def clean_wikitext(text: str, max_chars: int = 6000) -> str:
 REDIRECT_RE = re.compile(r"#(?:redirect|重定向)\s*\[\[(.*?)\]\]", re.I)
 
 
+@injectable
 class WikiUtils:
-    def __init__(self, context: Context):
+    def __init__(self, context: Annotated[Context, Inject(config="context")]):
         self.context = context
         self.http = AsyncHttpClient(
             timeout=15.0,
@@ -197,7 +200,7 @@ class WikiUtils:
         try:
             provider = self.context.get_using_provider()
             if not provider:
-                logger.warning(f"未配置 LLM，无法使用 Wiki 查询功能。")
+                logger.warning("未配置 LLM，无法使用 Wiki 查询功能。")
                 return "未配置 LLM，无法使用 Wiki 查询功能。"
 
             extracted_title = await self._extract_title(provider, question)
@@ -224,7 +227,7 @@ class WikiUtils:
                 return f"未找到“{extracted_title or question}”的 Wiki 页面内容。"
 
             if len(page_text) > 8000:
-                logger.warning(f"页面内容过长，截取前8000字符")
+                logger.warning("页面内容过长，截取前8000字符")
                 page_text = page_text[:8000] + "..."
 
             prompt = (

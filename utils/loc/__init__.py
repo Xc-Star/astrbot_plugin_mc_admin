@@ -1,6 +1,6 @@
 from .main import LocUtils
-from .vo import Loc
 from .result import LocResult
+from .vo import Loc
 
 __all__ = [
     "LocUtils",

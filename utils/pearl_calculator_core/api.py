@@ -1,15 +1,16 @@
 from __future__ import annotations
-from dataclasses import dataclass
-from typing import List, Optional, Tuple
+
 import math
-from .physics.world.space import Space3D
+from dataclasses import dataclass
+
+from .calculation.calculation import calculate_tnt_amount
+from .calculation.inputs import Cannon, Pearl
+from .calculation.results import CalculationResult, TNTResult
+from .calculation.trace import calculate_pearl_trace, calculate_raw_trace
+from .physics.entities.movement import PearlVersion
 from .physics.world.direction import Direction
 from .physics.world.layout_direction import LayoutDirection
-from .physics.entities.movement import PearlVersion
-from .calculation.inputs import Cannon, Pearl
-from .calculation.calculation import calculate_tnt_amount
-from .calculation.trace import calculate_pearl_trace, calculate_raw_trace
-from .calculation.results import TNTResult, CalculationResult
+from .physics.world.space import Space3D
 from .settings.types import CannonMode
 
 
@@ -38,22 +39,22 @@ class CalculationInput:
     default_red_direction: str
     default_blue_direction: str
     destination_x: float
-    destination_y: Optional[float]
+    destination_y: float | None
     destination_z: float
     max_tnt: int
     max_ticks: int
     max_distance: float
     version: str
-    vertical_tnt: Optional[Space3DInput]
-    max_vertical_tnt: Optional[int]
-    mode: Optional[str]
+    vertical_tnt: Space3DInput | None
+    max_vertical_tnt: int | None
+    mode: str | None
 
 
 @dataclass
 class PearlTraceInput:
     red_tnt: int
     blue_tnt: int
-    vertical_tnt_amount: Optional[int]
+    vertical_tnt_amount: int | None
     pearl_x: float
     pearl_y: float
     pearl_z: float
@@ -71,10 +72,10 @@ class PearlTraceInput:
     default_blue_direction: str
     destination_x: float
     destination_z: float
-    direction: Optional[str]
+    direction: str | None
     version: str
-    vertical_tnt: Optional[Space3DInput]
-    mode: Optional[str]
+    vertical_tnt: Space3DInput | None
+    mode: str | None
 
 
 @dataclass
@@ -93,7 +94,7 @@ class RawTraceInput:
     pearl_motion_x: float
     pearl_motion_y: float
     pearl_motion_z: float
-    tnt_groups: List[TntGroupInput]
+    tnt_groups: list[TntGroupInput]
     version: str
 
 
@@ -108,7 +109,7 @@ def parse_version(s: str) -> PearlVersion:
     return mapping[s]
 
 
-def parse_layout_direction(s: str) -> Optional[LayoutDirection]:
+def parse_layout_direction(s: str) -> LayoutDirection | None:
     mapping = {
         "NorthWest": LayoutDirection.NorthWest,
         "NorthEast": LayoutDirection.NorthEast,
@@ -135,8 +136,8 @@ def build_cannon(
     nw: Space3DInput, ne: Space3DInput,
     sw: Space3DInput, se: Space3DInput,
     red_dir: str, blue_dir: str,
-    vert: Optional[Space3DInput],
-    mode_str: Optional[str]
+    vert: Space3DInput | None,
+    mode_str: str | None
 ) -> Cannon:
     y_offset = cy - math.floor(py)
 
@@ -173,10 +174,9 @@ def build_cannon(
     )
 
 
-import math
 
 
-def calculate_tnt_amount_api(input: CalculationInput) -> List[TNTResult]:
+def calculate_tnt_amount_api(input: CalculationInput) -> list[TNTResult]:
     version = parse_version(input.version)
     cannon = build_cannon(
         input.pearl_x, input.pearl_y, input.pearl_z,
@@ -201,7 +201,7 @@ def calculate_tnt_amount_api(input: CalculationInput) -> List[TNTResult]:
     )
 
 
-def calculate_pearl_trace_api(input: PearlTraceInput) -> Optional[CalculationResult]:
+def calculate_pearl_trace_api(input: PearlTraceInput) -> CalculationResult | None:
     version = parse_version(input.version)
     cannon = build_cannon(
         input.pearl_x, input.pearl_y, input.pearl_z,
@@ -240,7 +240,7 @@ def calculate_pearl_trace_api(input: PearlTraceInput) -> Optional[CalculationRes
     )
 
 
-def calculate_raw_trace_api(input: RawTraceInput) -> Optional[CalculationResult]:
+def calculate_raw_trace_api(input: RawTraceInput) -> CalculationResult | None:
     version = parse_version(input.version)
 
     pearl_pos = Space3D(input.pearl_x, input.pearl_y, input.pearl_z)

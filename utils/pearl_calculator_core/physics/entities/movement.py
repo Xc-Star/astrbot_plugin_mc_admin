@@ -1,8 +1,9 @@
 from __future__ import annotations
+
 from enum import Enum
-from typing import Tuple, TYPE_CHECKING
+from typing import TYPE_CHECKING
+
 from ..constants.constants import PEARL_DRAG_MULTIPLIER, PEARL_GRAVITY_ACCELERATION
-from ..aabb.aabb_box import AABBBox
 
 if TYPE_CHECKING:
     from .pearl_entities import PearlEntity
@@ -25,7 +26,7 @@ class PearlVersion(Enum):
         else:
             return drag
 
-    def apply_motion_tick(self, velocity: float, drag: float) -> Tuple[float, float]:
+    def apply_motion_tick(self, velocity: float, drag: float) -> tuple[float, float]:
         if self in (PearlVersion.Legacy, PearlVersion.Post1205):
             displacement = velocity
             new_velocity = velocity * drag

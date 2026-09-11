@@ -1,1 +1,1 @@
-from .utils import to_radians, to_degrees
+from .utils import to_degrees, to_radians
