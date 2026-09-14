@@ -3,15 +3,15 @@ from wireup import injectable
 HELP_TITLE = "欢迎使用 Xc_Star 的 Minecraft 服务器管理插件"
 
 HELP_ITEMS = [
+    ("/mc wl add/remove &lt;游戏ID&gt;", "给玩家添加/移除白名单(管理员)"),
+    ("/mc command &lt;服务器名&gt; &lt;命令&gt;", "向指定服务器发送 MC 命令(管理员)"),
+    ("/mcdr &lt;服务器名&gt; &lt;命令&gt;", "向指定服务器发送 MCDR 命令(管理员)"),
+    ("/mc reset", "重载数据库中的白名单数据"),
+    ("/say &lt;信息&gt;", "向服务器发送信息"),
     ("/list", "获取在线玩家列表"),
     ("/loc", "查看服务器坐标"),
     ("/zz &lt;X坐标&gt; &lt;Z坐标&gt;", "珍珠炮计算"),
     ("/task", "查看当前工程"),
-    ("/mc wl add/remove &lt;游戏ID&gt;", "给玩家添加/移除白名单(管理员)"),
-    ("/mc command &lt;服务器名&gt; &lt;命令&gt;", "向指定服务器发送 MC 命令(管理员)"),
-    ("/mcdr &lt;服务器名&gt; &lt;命令&gt;", "向指定服务器发送 MCDR 命令(管理员)"),
-    ("/say &lt;信息&gt;", "向服务器发送信息"),
-    ("/mc reset", "重载数据库中的白名单数据"),
     ("/wiki &lt;问题&gt;", "通过大模型查 wiki 获取答案"),
     ("/原图", "获取上一张 list 图片的背景图"),
     ("/原图u", "获取上一张图片的路径"),

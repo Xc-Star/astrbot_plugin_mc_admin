@@ -15,65 +15,47 @@
 - 若上传工程材料文件时提示 `packetBackend` 不可用，请检查 NapCatQQ 版本与 `packetBackend` 配置。
 - MCDR命令功能依赖MCDR的[CCA插件](https://github.com/Xc-Star/console_command_api)；v1.x的astrbot插件依赖v1的MCDR插件，v2.x的astrbot插件依赖v2的MCDR插件
 
+## 注意事项
+- 导出材料列表功能必须 NapCat 和 Astrbot 在相同环境下，如 Astrbot 在本机 NapCat 在容器, NapCat 会读取不到本机 Astrbot 生成的xlsx文件
+- `servers` 配置错误会导致相关命令无法连通 RCON。
+- 当你的所有 MCDR 服务器都连接了CCA时，`servers` 配置可以不用管，如果有子服不属于 MCDR 服务器可以在 `servers` 额外添加。
+- 详细的配置介绍：`BVxiaciyiding`
+
 ## 功能概览
+- 帮助命令
 - 在线玩家列表
 - 白名单管理
-- RCON 命令转发
-- 服群聊天广播
-- 工程任务与材料备货管理（支持 txt/csv/litematic）
+- 执行指令
 - 珍珠炮落点计算
+- 工程任务与材料备货管理（支持 txt/csv/litematic）
+- 按群启用（仅配置群可触发）
+- 服群聊天广播
 - 服务器坐标点管理
 - 背景图抽卡与原图回看
 - 内置图库
-- 按群启用（仅配置群可触发）
 
-## 命令说明
+## 功能示例
 
-### 通用命令
-```text
-/mc ｜ 查看帮助
-/mc wl add/remove <ID> ｜ 给玩家添加/移除白名单(管理员)
-/mc command <服务器名字> <command> ｜ 向指定服务器发送MC命令(管理员)
-/mcdr <服务器名> <命令> ｜ 向指定服务器发送MCDR命令(管理员)
-/say <消息> ｜ 向所有服务器广播聊天消息
-/mc reset ｜ 重载数据库的白名单数据
+### 帮助命令：`mc`
+![帮助命令](docs/mc.webp)
 
-/list ｜ 查看所有服务器在线玩家
-/loc ｜ 查看 loc 命令帮助
-/task ｜ 查看服务器施工工程
-/zz <x> <z> ｜ 珍珠炮落点计算
-/wiki <问题> | 通过大模型查wiki
-/原图 ｜ 获取上一次list的背景图
-/原图u  |  获取上一张图片的路径，以便用于排查
-/抽卡 ｜ 随机获取一张list图库的图
-```
+### 在线玩家列表：`list`
+![在线玩家列表](docs/list.webp)
 
-### 工程命令（`/task`）
-```text
-/task list ｜ 查看工程列表
-/task add <工程名> <维度> <x y z> ｜ 添加一个工程，随后上传投影材料
-/task remove <工程名> ｜ 删除一个工程
-/task set <旧工程名> <新工程名> <维度> <x y z> ｜ 修改工程信息
-/task <工程名> ｜ 查看工程信息
-/task claim <工程名> <材料编号> ｜ 认领材料
-/task commit <工程名> <材料编号> <n个/组/盒> <位置/假人> ｜ 备货完成后提交材料
-/task export <工程名> | 导出材料列表为xlsx
-```
+### 执行指令：`command`
+![执行指令](docs/command.webp)
 
-`/task add` 后，机器人会提示你上传文件。支持上传 `txt`、`csv`、`litematic` 三种格式。
+### 白名单管理：`wl`、`wl list`
+![白名单管理](docs/wl.webp)
+![白名单列表](docs/wl-list.webp)
 
-### 路径点命令（`/loc`）
-```text
-/loc add <项目名字> <0-主世界 1-地狱 2-末地> <x y z> ｜ 添加路径点
-/loc remove <项目名字> ｜ 删除服务器项目
-/loc list ｜ 服务器项目坐标列表
-/loc <项目名字> ｜ 查看项目地址
-/loc set <项目名字> <0-主世界 1-地狱 2-末地> <x y z> ｜ 修改项目坐标
-```
+### 珍珠炮落点计算：`zz`
+![珍珠炮落点计算](docs/zz.webp)
+
+### 工程任务：`task`
+![工程任务](docs/task.webp)
 
 ## 配置说明
-
-配置文件：`_conf_schema.json`
 
 | 配置项 | 类型 | 默认值 | 说明                             |
 |---|---|---|--------------------------------|
@@ -94,9 +76,3 @@
 | `red_bit_count` | string | `""` | 红色阵列 TNT 位权配置（逗号分隔）            |
 | `blue_bit_count` | string | `""` | 蓝色阵列 TNT 位权配置（逗号分隔）            |
 | `direction_bit` | string | `""` | 方位编码映射（ESWN，逗号分隔）              |
-
-## 注意事项
-- 导出材料列表功能必须 NapCat 和 Astrbot 在相同环境下，如 Astrbot 在本机 NapCat 在容器, NapCat 会读取不到本机 Astrbot 生成的xlsx文件
-- `servers` 配置错误会导致相关命令无法连通 RCON。
-- 当你的所有 MCDR 服务器都连接了CCA时，`servers` 配置可以不用管，如果有子服不属于 MCDR 服务器可以在 `servers` 额外添加。
-- 详细的配置介绍：`BV`
