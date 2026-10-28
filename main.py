@@ -24,7 +24,7 @@ from .utils.decorators import in_enabled_groups, requires_enabled
     "astrbot_plugin_mc_admin",
     "Xc_Star",
     "这是 Minecraft 服务器 的管理插件，支持群组服，RCON命令，list，珍珠炮落点计算，服务器工程坐标，备货清单，白名单管理等功能",
-    "2.4.0",
+    "2.5.0",
     "https://github.com/Xc-Star/astrbot_plugin_mc_admin",
 )
 class McAdminPlugin(Star):
@@ -46,7 +46,7 @@ class McAdminPlugin(Star):
         # 检查并安装 Playwright Chromium
         await self._ensure_playwright_installed()
 
-    @filter.command("test")
+    # @filter.command("test")
     async def test(self, event: AstrMessageEvent):
         yield event.plain_result("test")
 

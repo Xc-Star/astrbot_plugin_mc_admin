@@ -37,13 +37,7 @@ __MACOSX/
 *.bak
 
 # 生成的图片
-list.png
-task.png
-task_*.png
-help.png
-loc_help.png
-zz.png
-status.png
+output/
 
 # 环境变量文件
 .env

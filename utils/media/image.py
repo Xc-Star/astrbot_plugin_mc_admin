@@ -447,7 +447,7 @@ class ImageUtils:
             )
             return ""
 
-        return f"{MATERIAL_ICON_BASE_URL}/file/mc_admin/{file_name_base}{ext}"
+        return f"{MATERIAL_ICON_BASE_URL}/file/mc_admin/task_icon/{file_name_base}{ext}"
 
     def _load_material_icon_map(self) -> dict:
         """加载材料图标后缀映射表
